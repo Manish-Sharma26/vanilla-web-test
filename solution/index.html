@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unit Converter</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="app-header">
+    <h1>Unit Converter</h1>
+  </header>
+  <main>
+    <section id="converter-card">
+      <h2>Convert units</h2>
+      <div class="controls">
+        <label for="value-input">Value</label>
+        <input id="value-input" type="text" inputmode="decimal" placeholder="Enter a value">
+        <label for="from-unit">From</label>
+        <select id="from-unit">
+          <option value="km">Kilometers</option>
+          <option value="mi">Miles</option>
+          <option value="m">Meters</option>
+          <option value="ft">Feet</option>
+          <option value="kg">Kilograms</option>
+          <option value="lb">Pounds</option>
+          <option value="C">°C</option>
+          <option value="F">°F</option>
+        </select>
+        <label for="to-unit">To</label>
+        <select id="to-unit">
+          <option value="km">Kilometers</option>
+          <option value="mi" selected>Miles</option>
+          <option value="m">Meters</option>
+          <option value="ft">Feet</option>
+          <option value="kg">Kilograms</option>
+          <option value="lb">Pounds</option>
+          <option value="C">°C</option>
+          <option value="F">°F</option>
+        </select>
+        <button id="convert-btn" type="button">Convert</button>
+      </div>
+      <p id="result" aria-live="polite"></p>
+      <p id="error" role="alert"></p>
+    </section>
+  </main>
+  <footer>
+    <p>© Unit Converter Mock</p>
+  </footer>
+  <script src="script.js"></script>
+</body>
+</html>

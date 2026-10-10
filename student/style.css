@@ -1,0 +1,26 @@
+body {
+  margin: 0;
+  font-family: sans-serif;
+}
+
+main {
+  padding: 16px;
+}
+
+#converter-card {
+  max-width: 560px;
+  padding: 16px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.controls > * {
+  display: block;
+  margin-bottom: 8px;
+}
+
+footer {
+  background: #cccccc;
+  padding: 12px;
+  text-align: center;
+}

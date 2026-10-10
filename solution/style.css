@@ -1,0 +1,49 @@
+body {
+  margin: 0;
+  font-family: sans-serif;
+}
+
+#app-header {
+  background: #2563eb;
+  color: white;
+  padding: 16px;
+  text-align: center;
+}
+
+main {
+  padding: 16px;
+}
+
+#converter-card {
+  max-width: 560px;
+  padding: 16px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin: 0 auto;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.controls > label {
+  display: none;
+}
+
+.controls > * {
+  margin-bottom: 8px;
+}
+
+footer {
+  background: #1e3a8a;
+  color: white;
+  padding: 12px;
+  text-align: center;
+}
+
+#error {
+  color: red;
+}

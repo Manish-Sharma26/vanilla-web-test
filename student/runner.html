@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unit Converter – Test Runner</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f5f5f5; color: #222; }
+    .toolbar { background: #1e293b; color: white; padding: 12px 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .toolbar h1 { margin: 0; font-size: 1.2rem; margin-right: auto; }
+    .toolbar button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+    #run-btn { background: #22c55e; color: white; }
+    #run-hidden-btn { background: #3b82f6; color: white; }
+    #copy-btn { background: #64748b; color: white; }
+    .toolbar button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .banner { padding: 10px 20px; font-size: 0.9rem; }
+    .banner.warning { background: #fef3c7; color: #92400e; border-bottom: 1px solid #f59e0b; }
+    .banner.error { background: #fee2e2; color: #991b1b; border-bottom: 1px solid #ef4444; }
+    .banner.info { background: #dbeafe; color: #1e40af; border-bottom: 1px solid #3b82f6; }
+    #output { padding: 20px; max-width: 900px; margin: 0 auto; }
+    .category-header { font-size: 1rem; font-weight: 700; margin: 18px 0 6px; padding: 6px 0; border-bottom: 2px solid #cbd5e1; }
+    .test-row { display: flex; align-items: baseline; gap: 8px; padding: 4px 0; font-size: 0.92rem; }
+    .test-row .icon { flex-shrink: 0; width: 22px; text-align: center; }
+    .test-row.pass .icon { color: #16a34a; }
+    .test-row.fail .icon { color: #dc2626; }
+    .test-row .name { flex: 1; }
+    .test-row .weight { color: #64748b; font-size: 0.8rem; min-width: 40px; text-align: right; }
+    .test-row .msg { color: #dc2626; font-size: 0.82rem; margin-left: 30px; display: block; }
+    .subtotal { font-size: 0.9rem; color: #475569; margin: 4px 0 12px 30px; }
+    .final-score { font-size: 1.3rem; font-weight: 700; margin: 24px 0; text-align: center; padding: 16px; background: white; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .final-score .split { font-size: 0.85rem; color: #64748b; font-weight: 400; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <h1>🧪 Test Runner</h1>
+    <button id="run-btn" onclick="handleRun(false)">Run tests</button>
+    <button id="run-hidden-btn" onclick="handleRun(true)" disabled>Run hidden tests</button>
+    <button id="copy-btn" onclick="handleCopy()" disabled>Copy results</button>
+  </div>
+
+  <div id="banners"></div>
+  <div id="output"><p style="color:#64748b;">Click <strong>Run tests</strong> to start.</p></div>
+
+  <!-- Off-screen iframe wrapper -->
+  <div id="iframe-wrapper" style="position:absolute;left:-99999px;width:1280px;height:800px;overflow:hidden;">
+    <iframe id="student-frame" style="width:100%;height:100%;border:none;"></iframe>
+  </div>
+
+  <script src="tests.js"></script>
+  <script>
+    // ─── Globals ─────────────────────────────────────────────────
+    var hiddenTests = [];
+    var hiddenAvailable = false;
+    var lastResults = null;
+
+    // Check if hidden-tests.js exists
+    (function checkHidden() {
+      fetch('hidden-tests.js', { method: 'HEAD', cache: 'no-store' })
+        .then(function(r) {
+          if (r.ok) {
+            hiddenAvailable = true;
+            document.getElementById('run-hidden-btn').disabled = false;
+            // Load it
+            var s = document.createElement('script');
+            s.src = 'hidden-tests.js?t=' + Date.now();
+            s.onload = function() {
+              // hidden-tests.js pushes into the global hiddenTests array
+            };
+            document.head.appendChild(s);
+          }
+        })
+        .catch(function() {});
+    })();
+
+    // File-protocol warning
+    if (location.protocol === 'file:') {
+      addBanner('warning', '⚠️ Serve this folder over HTTP, e.g. <code>python -m http.server</code>. Tests cannot load files via file:// protocol.');
+    }
+
+    function addBanner(type, html) {
+      var div = document.createElement('div');
+      div.className = 'banner ' + type;
+      div.innerHTML = html;
+      document.getElementById('banners').appendChild(div);
+    }
+
+    // ─── Fetch student files & build srcdoc ──────────────────────
+    async function buildSrcdoc() {
+      var htmlText = await fetch('index.html', { cache: 'no-store' }).then(function(r) { return r.text(); });
+      var cssText = await fetch('style.css', { cache: 'no-store' }).then(function(r) { return r.text(); });
+      var jsText = await fetch('script.js', { cache: 'no-store' }).then(function(r) { return r.text(); });
+
+      // Parse HTML and inline CSS + JS
+      var parser = new DOMParser();
+      var doc = parser.parseFromString(htmlText, 'text/html');
+
+      // Replace <link rel="stylesheet" href="style.css"> with inline <style>
+      var links = doc.querySelectorAll('link[rel="stylesheet"]');
+      for (var i = 0; i < links.length; i++) {
+        var href = links[i].getAttribute('href');
+        if (href && (href === 'style.css' || href.indexOf('style.css') !== -1)) {
+          var style = doc.createElement('style');
+          style.textContent = cssText;
+          links[i].parentNode.replaceChild(style, links[i]);
+        }
+      }
+
+      // Replace <script src="script.js"> with inline <script>
+      var scripts = doc.querySelectorAll('script[src]');
+      for (var j = 0; j < scripts.length; j++) {
+        var src = scripts[j].getAttribute('src');
+        if (src && (src === 'script.js' || src.indexOf('script.js') !== -1)) {
+          var inlineScript = doc.createElement('script');
+          inlineScript.textContent = jsText;
+          scripts[j].parentNode.replaceChild(inlineScript, scripts[j]);
+        }
+      }
+
+      return '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+    }
+
+    // ─── Load iframe ─────────────────────────────────────────────
+    function loadIframe(srcdoc, width) {
+      return new Promise(function(resolve, reject) {
+        var wrapper = document.getElementById('iframe-wrapper');
+        wrapper.style.width = (width || 1280) + 'px';
+
+        var oldFrame = document.getElementById('student-frame');
+        var newFrame = document.createElement('iframe');
+        newFrame.id = 'student-frame';
+        newFrame.style.cssText = 'width:100%;height:100%;border:none;';
+
+        var scriptError = null;
+
+        newFrame.onload = function() {
+          // Set up error catcher inside the iframe
+          try {
+            newFrame.contentWindow.onerror = function(msg, src, line, col, err) {
+              scriptError = { message: msg, source: src, line: line };
+            };
+          } catch(e) {}
+
+          setTimeout(function() {
+            resolve({ frame: newFrame, scriptError: scriptError });
+          }, 60);
+        };
+
+        oldFrame.parentNode.replaceChild(newFrame, oldFrame);
+        newFrame.srcdoc = srcdoc;
+      });
+    }
+
+    // ─── Build test context ──────────────────────────────────────
+    function makeContext(frame) {
+      var w = frame.contentWindow;
+      var d = frame.contentDocument;
+
+      return {
+        w: w,
+        d: d,
+        $: function(sel) { return d.querySelector(sel); },
+        $$: function(sel) { return d.querySelectorAll(sel); },
+        css: function(el) { return w.getComputedStyle(el); },
+        fill: function(sel, value) {
+          var el = d.querySelector(sel);
+          if (!el) throw new Error('Element not found: ' + sel);
+          el.value = value;
+          el.dispatchEvent(new w.Event('input', { bubbles: true }));
+          el.dispatchEvent(new w.Event('change', { bubbles: true }));
+        },
+        click: function(sel) {
+          var el = d.querySelector(sel);
+          if (!el) throw new Error('Element not found: ' + sel);
+          el.click();
+        },
+        resize: function(px) {
+          return new Promise(function(resolve) {
+            var wrapper = document.getElementById('iframe-wrapper');
+            wrapper.style.width = px + 'px';
+            frame.style.width = '100%';
+            setTimeout(resolve, 120);
+          });
+        },
+        textOf: function(sel) { return textOf(d, sel); },
+        numAfterEquals: numAfterEquals
+      };
+    }
+
+    // ─── Run a single test ───────────────────────────────────────
+    async function runSingleTest(t, srcdoc) {
+      var result = { id: t.id, name: t.name, category: t.category, weight: t.weight, passed: false, message: '' };
+
+      try {
+        var loaded = await loadIframe(srcdoc, 1280);
+
+        if (loaded.scriptError) {
+          // Show the error but still run the test
+          var errMsg = 'Script error: ' + loaded.scriptError.message;
+          if (!document.querySelector('.banner.error')) {
+            addBanner('error', '⚠️ ' + errMsg);
+          }
+        }
+
+        var ctx = makeContext(loaded.frame);
+
+        // Run with timeout
+        await Promise.race([
+          Promise.resolve(t.fn(ctx)),
+          new Promise(function(_, reject) {
+            setTimeout(function() { reject(new Error('Test timed out (3s)')); }, 3000);
+          })
+        ]);
+
+        result.passed = true;
+      } catch (e) {
+        result.message = e.message || String(e);
+      }
+
+      return result;
+    }
+
+    // ─── Run all tests ───────────────────────────────────────────
+    async function runTests(opts) {
+      opts = opts || {};
+      var includeHidden = !!opts.includeHidden;
+
+      var srcdoc = await buildSrcdoc();
+
+      var allTests = tests.slice();
+      if (includeHidden && hiddenTests.length > 0) {
+        allTests = allTests.concat(hiddenTests);
+      }
+
+      var results = [];
+      for (var i = 0; i < allTests.length; i++) {
+        var r = await runSingleTest(allTests[i], srcdoc);
+        results.push(r);
+      }
+
+      var score = 0;
+      var total = 0;
+      for (var j = 0; j < results.length; j++) {
+        total += results[j].weight;
+        if (results[j].passed) score += results[j].weight;
+      }
+
+      return { score: score, total: total, results: results };
+    }
+
+    // Expose programmatic API
+    window.runTests = runTests;
+
+    // ─── UI handlers ─────────────────────────────────────────────
+    async function handleRun(includeHidden) {
+      var output = document.getElementById('output');
+      output.innerHTML = '<p style="color:#64748b;">Running tests…</p>';
+      document.getElementById('banners').innerHTML = '';
+
+      // Re-add file protocol warning if needed
+      if (location.protocol === 'file:') {
+        addBanner('warning', '⚠️ Serve this folder over HTTP, e.g. <code>python -m http.server</code>.');
+      }
+
+      try {
+        var data = await runTests({ includeHidden: includeHidden });
+        lastResults = data;
+        renderResults(data, includeHidden);
+        document.getElementById('copy-btn').disabled = false;
+      } catch(e) {
+        output.innerHTML = '<p style="color:red;">Runner error: ' + e.message + '</p>';
+      }
+    }
+
+    function renderResults(data, includeHidden) {
+      var output = document.getElementById('output');
+      output.innerHTML = '';
+
+      // Group by category
+      var categories = {};
+      var catOrder = [];
+      for (var i = 0; i < data.results.length; i++) {
+        var r = data.results[i];
+        if (!categories[r.category]) {
+          categories[r.category] = [];
+          catOrder.push(r.category);
+        }
+        categories[r.category].push(r);
+      }
+
+      // Compute visible / hidden split
+      var visibleScore = 0, visibleTotal = 0, hiddenScore = 0, hiddenTotal = 0;
+      for (var k = 0; k < data.results.length; k++) {
+        var res = data.results[k];
+        if (res.id.charAt(0) === 'H') {
+          hiddenTotal += res.weight;
+          if (res.passed) hiddenScore += res.weight;
+        } else {
+          visibleTotal += res.weight;
+          if (res.passed) visibleScore += res.weight;
+        }
+      }
+
+      for (var c = 0; c < catOrder.length; c++) {
+        var cat = catOrder[c];
+        var items = categories[cat];
+        var catPassed = 0, catTotal = 0;
+        for (var t = 0; t < items.length; t++) {
+          catTotal += items[t].weight;
+          if (items[t].passed) catPassed += items[t].weight;
+        }
+
+        var header = document.createElement('div');
+        header.className = 'category-header';
+        header.textContent = cat + ' (' + catPassed + ' / ' + catTotal + ')';
+        output.appendChild(header);
+
+        for (var m = 0; m < items.length; m++) {
+          var item = items[m];
+          var row = document.createElement('div');
+          row.className = 'test-row ' + (item.passed ? 'pass' : 'fail');
+          row.innerHTML =
+            '<span class="icon">' + (item.passed ? '✓' : '✗') + '</span>' +
+            '<span class="name">[' + item.id + '] ' + escHtml(item.name) + '</span>' +
+            '<span class="weight">' + item.weight + ' pts</span>';
+          if (!item.passed && item.message) {
+            row.innerHTML += '<span class="msg">' + escHtml(item.message) + '</span>';
+          }
+          output.appendChild(row);
+        }
+
+        var subtotal = document.createElement('div');
+        subtotal.className = 'subtotal';
+        subtotal.textContent = 'Subtotal: ' + catPassed + ' / ' + catTotal;
+        output.appendChild(subtotal);
+      }
+
+      // Final score
+      var scoreDiv = document.createElement('div');
+      scoreDiv.className = 'final-score';
+      scoreDiv.innerHTML = 'Score: ' + data.score + ' / ' + data.total;
+      if (includeHidden && hiddenTotal > 0) {
+        scoreDiv.innerHTML += '<br><span class="split">Visible: ' + visibleScore + '/' + visibleTotal +
+          ' &nbsp;|&nbsp; Hidden: ' + hiddenScore + '/' + hiddenTotal + '</span>';
+      }
+      output.appendChild(scoreDiv);
+    }
+
+    function escHtml(str) {
+      var div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function handleCopy() {
+      if (!lastResults) return;
+      var lines = [];
+      lines.push('Unit Converter Test Results');
+      lines.push('Score: ' + lastResults.score + ' / ' + lastResults.total);
+      lines.push('');
+      for (var i = 0; i < lastResults.results.length; i++) {
+        var r = lastResults.results[i];
+        lines.push((r.passed ? '✓' : '✗') + ' [' + r.id + '] ' + r.name + ' (' + r.weight + ' pts)' +
+          (r.passed ? '' : ' — ' + r.message));
+      }
+      navigator.clipboard.writeText(lines.join('\n')).then(function() {
+        alert('Results copied to clipboard!');
+      });
+    }
+  </script>
+</body>
+</html>
+
