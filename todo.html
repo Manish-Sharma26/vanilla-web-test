@@ -1,0 +1,2190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo List – Web IDE & Live Preview</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✅</text></svg>">
+  <style>
+    :root {
+      --bg-dark: #1e1e1e;
+      --bg-editor: #1e1e1e;
+      --bg-sidebar: #252526;
+      --bg-activity: #333333;
+      --bg-tab-bar: #252526;
+      --bg-tab-inactive: #2d2d2d;
+      --bg-tab-active: #1e1e1e;
+      --bg-statusbar: #059669;
+      --text-main: #cccccc;
+      --text-bright: #ffffff;
+      --text-muted: #858585;
+      --border-color: #3e3e42;
+      --accent: #10b981;
+      --accent-hover: #059669;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #eab308;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, html {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-main);
+    }
+
+    #app-container {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* Top Titlebar */
+    .titlebar {
+      height: 35px;
+      background: #181818;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-size: 12px;
+      border-bottom: 1px solid var(--border-color);
+      user-select: none;
+    }
+    .titlebar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .titlebar-brand {
+      font-weight: 600;
+      color: var(--text-bright);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .titlebar-brand svg {
+      width: 16px; height: 16px; fill: #10b981;
+    }
+    .titlebar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-action {
+      background: #2a2d2e;
+      color: var(--text-bright);
+      border: 1px solid var(--border-color);
+      padding: 4px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 0.15s;
+    }
+    .btn-action:hover { background: #383b3d; }
+    .btn-action.primary {
+      background: #4f46e5;
+      border-color: #4f46e5;
+    }
+    .btn-action.primary:hover { background: #4338ca; }
+    .btn-action.success {
+      background: #166534;
+      border-color: #22c55e;
+      color: #86efac;
+    }
+    .btn-action.success:hover { background: #15803d; }
+
+    /* Main Workspace Layout */
+    .main-workspace {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Activity Bar */
+    .activity-bar {
+      width: 48px;
+      background: var(--bg-activity);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 0;
+      gap: 16px;
+      user-select: none;
+      border-right: 1px solid #2d2d2d;
+    }
+    .activity-icon {
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+      border-left: 2px solid transparent;
+      transition: color 0.15s;
+    }
+    .activity-icon:hover {
+      color: var(--text-bright);
+    }
+    .activity-icon.active {
+      color: var(--text-bright);
+      border-left: 2px solid var(--accent);
+    }
+    .activity-icon svg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 200px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+    .sidebar-header {
+      padding: 8px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      border-bottom: 1px solid #2d2d2d;
+    }
+    .file-tree {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 0;
+    }
+    .file-tree-section {
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+    }
+    .file-item {
+      display: flex;
+      align-items: center;
+      padding: 5px 16px;
+      font-size: 12px;
+      cursor: pointer;
+      gap: 8px;
+      color: var(--text-main);
+    }
+    .file-item:hover {
+      background: #2a2d2e;
+      color: var(--text-bright);
+    }
+    .file-item.active {
+      background: #37373d;
+      color: var(--text-bright);
+      font-weight: 500;
+    }
+    .file-badge {
+      margin-left: auto;
+      font-size: 9px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      background: #333333;
+      color: var(--text-muted);
+    }
+    .file-badge.html { color: #e34f26; }
+    .file-badge.css { color: #264de4; }
+    .file-badge.js { color: #f7df1e; }
+    .file-badge.md { color: #0891b2; }
+
+    /* Left Editor Section */
+    .editor-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-editor);
+      overflow: hidden;
+      min-width: 300px;
+    }
+
+    /* Tabs */
+    .tab-bar {
+      height: 35px;
+      background: var(--bg-tab-bar);
+      display: flex;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--border-color);
+      user-select: none;
+    }
+    .tab-item {
+      height: 100%;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      background: var(--bg-tab-inactive);
+      color: var(--text-muted);
+      border-right: 1px solid #1e1e1e;
+      cursor: pointer;
+      position: relative;
+    }
+    .tab-item:hover {
+      background: #282828;
+      color: var(--text-main);
+    }
+    .tab-item.active {
+      background: var(--bg-tab-active);
+      color: var(--text-bright);
+      border-top: 2px solid var(--accent);
+    }
+    .tab-item .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: none;
+    }
+    .tab-item.modified .dot {
+      display: block;
+    }
+
+    /* Breadcrumbs */
+    .breadcrumbs {
+      height: 22px;
+      background: var(--bg-editor);
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      border-bottom: 1px solid #282828;
+      user-select: none;
+      gap: 6px;
+    }
+
+    /* Code Editor Area */
+    .code-editor-wrapper {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+    .line-numbers {
+      width: 45px;
+      background: var(--bg-editor);
+      padding: 12px 6px;
+      text-align: right;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 20px;
+      color: #5a5a5a;
+      user-select: none;
+      overflow: hidden;
+      border-right: 1px solid #282828;
+    }
+    .editor-textarea-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+    .code-textarea {
+      width: 100%;
+      height: 100%;
+      background: var(--bg-editor);
+      color: #d4d4d4;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 20px;
+      border: none;
+      outline: none;
+      resize: none;
+      padding: 12px 14px;
+      white-space: pre;
+      overflow-wrap: normal;
+      overflow: auto;
+      tab-size: 2;
+    }
+
+    /* Resizer Bar */
+    .resizer {
+      width: 5px;
+      background: #252526;
+      cursor: col-resize;
+      transition: background 0.15s;
+      z-index: 10;
+    }
+    .resizer:hover, .resizer.dragging {
+      background: var(--accent);
+    }
+
+    /* Right Preview Section */
+    .preview-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      overflow: hidden;
+      min-width: 320px;
+      position: relative;
+    }
+
+    /* Browser Header */
+    .browser-header {
+      height: 38px;
+      background: #f1f5f9;
+      border-bottom: 1px solid #cbd5e1;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 10px;
+      color: #334155;
+      user-select: none;
+    }
+    .browser-nav-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 4px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #64748b;
+    }
+    .browser-nav-btn:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+    .browser-address-bar {
+      flex: 1;
+      height: 28px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      font-size: 12px;
+      color: #475569;
+      gap: 6px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .browser-address-bar svg { width: 12px; height: 12px; fill: #10b981; flex-shrink: 0; }
+    .browser-address-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* View Switcher Tabs */
+    .view-switcher {
+      display: flex;
+      gap: 4px;
+      background: #e2e8f0;
+      padding: 2px;
+      border-radius: 5px;
+    }
+    .view-switcher button {
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      border: none;
+      background: transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #475569;
+      transition: all 0.15s;
+    }
+    .view-switcher button.active {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    }
+
+    /* Device sizes */
+    .viewport-controls {
+      display: flex;
+      gap: 4px;
+    }
+    .viewport-btn {
+      background: #e2e8f0;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      color: #475569;
+    }
+    .viewport-btn.active {
+      background: #10b981;
+      color: #ffffff;
+    }
+
+    /* Preview Frame Area */
+    .preview-body {
+      flex: 1;
+      position: relative;
+      background: #f8fafc;
+      overflow: auto;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+    #preview-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #ffffff;
+      transition: width 0.2s ease;
+      box-shadow: 0 0 15px rgba(0,0,0,0.05);
+    }
+
+    /* Test Runner Tab Panel */
+    #test-runner-panel {
+      position: absolute;
+      inset: 0;
+      background: #f8fafc;
+      z-index: 5;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #test-runner-panel.visible {
+      display: flex;
+    }
+    .test-panel-header {
+      padding: 10px 16px;
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .test-panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+    .test-score-banner {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    /* Console Panel */
+    #console-panel {
+      position: absolute;
+      inset: 0;
+      background: #0f172a;
+      z-index: 6;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #console-panel.visible {
+      display: flex;
+    }
+    .console-toolbar {
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      user-select: none;
+    }
+    .console-toolbar span {
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .console-clear-btn {
+      background: transparent;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 11px;
+      cursor: pointer;
+      margin-left: auto;
+    }
+    .console-clear-btn:hover { background: #334155; color: #fff; }
+    #console-output {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+      font-family: 'Cascadia Code','Fira Code','Consolas',monospace;
+      font-size: 12.5px;
+      line-height: 1.6;
+    }
+    .console-entry {
+      padding: 3px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      word-break: break-all;
+    }
+    .console-entry.log   { color: #e2e8f0; }
+    .console-entry.info  { color: #7dd3fc; border-left: 2px solid #38bdf8; }
+    .console-entry.warn  { color: #fde68a; background: rgba(251,191,36,0.06); border-left: 2px solid #f59e0b; }
+    .console-entry.error { color: #fca5a5; background: rgba(239,68,68,0.07); border-left: 2px solid #ef4444; }
+    .console-icon { flex-shrink: 0; font-size: 11px; width: 14px; }
+    .console-badge {
+      position: absolute;
+      top: -4px; right: -4px;
+      background: #ef4444;
+      color: white;
+      font-size: 9px;
+      font-weight: 700;
+      border-radius: 10px;
+      padding: 1px 4px;
+      display: none;
+    }
+
+    /* Bottom Status Bar */
+    .statusbar {
+      height: 24px;
+      background: var(--bg-statusbar);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      font-size: 11px;
+      color: #ffffff;
+      user-select: none;
+    }
+    .statusbar-left, .statusbar-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .statusbar-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+    .statusbar-item:hover { opacity: 0.85; }
+
+    /* Toast Notification */
+    #toast {
+      position: fixed;
+      bottom: 35px;
+      right: 20px;
+      background: #1e293b;
+      color: #ffffff;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      border-left: 4px solid var(--accent);
+      z-index: 100;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.2s ease;
+      pointer-events: none;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div id="app-container">
+    <!-- VS Code Top Title Bar -->
+    <div class="titlebar">
+      <div class="titlebar-left">
+        <div class="titlebar-brand">
+          <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+          Todo List – Web IDE
+        </div>
+        <span style="color: var(--text-muted); font-size: 11px;">todo/</span>
+      </div>
+      <div class="titlebar-actions">
+        <button class="btn-action" onclick="window.location.href='index.html'">← Home</button>
+        <button class="btn-action" onclick="loadPreset('starter')">↺ Load Starter</button>
+        <button class="btn-action" onclick="loadPreset('solution')">★ Load Solution</button>
+        <button class="btn-action primary" onclick="updatePreview(true)">▶ Run / Save (Ctrl+S)</button>
+        <button class="btn-action success" onclick="openTestTabAndRun()">⚡ Test Score: <span id="score-indicator">0 / 100</span></button>
+      </div>
+    </div>
+
+    <!-- Main IDE Workspace -->
+    <div class="main-workspace">
+      <!-- Activity Bar -->
+      <div class="activity-bar">
+        <div class="activity-icon active" title="Explorer">
+          <svg viewBox="0 0 24 24"><path d="M4 4h7l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>
+        </div>
+        <div class="activity-icon" title="Run Tests" onclick="openTestTabAndRun()">
+          <svg viewBox="0 0 24 24"><path d="M7 2v2h1v5l-4 8v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3l-4-8V4h1V2H7zm3 2h4v5l3.5 7H6.5L10 9V4z"/></svg>
+        </div>
+        <div class="activity-icon" title="Console" onclick="switchRightView('console')">
+          <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zm-2-1H6v-2h12v2zm-9.5-4L7 11.5l1.5-1.5L12 13.5 10.5 15zM17 14H13v-1.5h4V14z"/></svg>
+        </div>
+      </div>
+
+      <!-- Explorer Sidebar -->
+      <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">Explorer</div>
+        <div class="file-tree">
+          <div class="file-tree-section">▾ TODO FILES</div>
+          <div class="file-item active" id="nav-html" onclick="openFile('html')">
+            <span>📄</span>
+            <span>index.html</span>
+            <span class="file-badge html">&lt;/&gt;</span>
+          </div>
+          <div class="file-item" id="nav-css" onclick="openFile('css')">
+            <span>📄</span>
+            <span>style.css</span>
+            <span class="file-badge css">#</span>
+          </div>
+          <div class="file-item" id="nav-js" onclick="openFile('js')">
+            <span>📄</span>
+            <span>script.js</span>
+            <span class="file-badge js">{ }</span>
+          </div>
+
+          <div class="file-tree-section" style="margin-top: 14px;">▾ DOCUMENTATION</div>
+          <div class="file-item" id="nav-readme" onclick="openFile('readme')">
+            <span>📝</span>
+            <span>README.md</span>
+            <span class="file-badge md">MD</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Left: Editor Area -->
+      <div class="editor-section" id="editor-section">
+        <!-- Editor Tabs -->
+        <div class="tab-bar">
+          <div class="tab-item active" id="tab-html" onclick="openFile('html')">
+            <span>index.html</span>
+            <div class="dot"></div>
+          </div>
+          <div class="tab-item" id="tab-css" onclick="openFile('css')">
+            <span>style.css</span>
+            <div class="dot"></div>
+          </div>
+          <div class="tab-item" id="tab-js" onclick="openFile('js')">
+            <span>script.js</span>
+            <div class="dot"></div>
+          </div>
+          <div class="tab-item" id="tab-readme" onclick="openFile('readme')">
+            <span>README.md</span>
+            <div class="dot"></div>
+          </div>
+        </div>
+
+        <!-- Breadcrumbs -->
+        <div class="breadcrumbs" id="breadcrumbs">
+          <span>todo-app</span> &gt; <span>src</span> &gt; <span id="current-filename">index.html</span>
+        </div>
+
+        <!-- Code Area -->
+        <div class="code-editor-wrapper">
+          <div class="line-numbers" id="line-numbers">1</div>
+          <div class="editor-textarea-container">
+            <textarea
+              class="code-textarea"
+              id="code-editor"
+              spellcheck="false"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resizer Bar -->
+      <div class="resizer" id="resizer"></div>
+
+      <!-- Right: Website View -->
+      <div class="preview-section" id="preview-section">
+        <!-- Browser Navigation Bar -->
+        <div class="browser-header">
+          <button class="browser-nav-btn" onclick="updatePreview(true)" title="Reload website">↻</button>
+          <div class="browser-address-bar">
+            <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            <span class="browser-address-text">preview://todo/index.html</span>
+          </div>
+
+          <div class="viewport-controls">
+            <button class="viewport-btn active" id="vp-desktop" onclick="setViewport('100%')">Desktop</button>
+            <button class="viewport-btn" id="vp-mobile" onclick="setViewport('420px')">Mobile</button>
+          </div>
+
+          <div class="view-switcher">
+            <button class="active" id="btn-view-site" onclick="switchRightView('site')">🌐 Website</button>
+            <button id="btn-view-console" onclick="switchRightView('console')" style="position:relative;">🖥️ Console<span class="console-badge" id="console-badge">!</span></button>
+            <button id="btn-view-tests" onclick="switchRightView('tests')">⚡ Tests (<span id="btn-tests-badge">0/100</span>)</button>
+          </div>
+        </div>
+
+        <!-- Preview Body Container -->
+        <div class="preview-body" id="preview-body">
+          <iframe id="preview-iframe"></iframe>
+
+          <!-- Console Panel -->
+          <div id="console-panel">
+            <div class="console-toolbar">
+              <span>🖥️ Console</span>
+              <button class="console-clear-btn" onclick="clearConsole()">Clear</button>
+            </div>
+            <div id="console-output">
+              <div class="console-entry info"><span class="console-icon">ℹ</span><span>Console ready. Run or save your code to see output.</span></div>
+            </div>
+          </div>
+
+          <!-- Test Runner Tab -->
+          <div id="test-runner-panel">
+            <div class="test-panel-header">
+              <div>
+                <span class="test-score-banner" id="score-heading">Score: 0 / 100</span>
+                <span style="font-size: 13px; color: #94a3b8; margin-left: 12px;" id="score-breakdown">Visible: 0/85 | Hidden: 0/15</span>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <label style="font-size: 12px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                  <input type="checkbox" id="chk-include-hidden" checked onchange="runInBrowserTests()"> Include Hidden
+                </label>
+                <button class="btn-action primary" onclick="runInBrowserTests()">Run Tests</button>
+              </div>
+            </div>
+            <div class="test-panel-body" id="test-results-container">
+              <p style="color:#64748b;">Click <strong>Run Tests</strong> to evaluate code.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Status Bar -->
+    <div class="statusbar">
+      <div class="statusbar-left">
+        <span class="statusbar-item">✅ Todo List</span>
+        <span class="statusbar-item" id="status-cursor">Ln 1, Col 1</span>
+        <span class="statusbar-item" id="status-sync">✓ Auto-sync enabled</span>
+      </div>
+      <div class="statusbar-right">
+        <span class="statusbar-item">Spaces: 2</span>
+        <span class="statusbar-item">UTF-8</span>
+        <span class="statusbar-item" id="status-mode">HTML</span>
+        <span class="statusbar-item" onclick="openTestTabAndRun()" style="font-weight: 600;">⚡ Run Tests</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast">Code saved & preview updated!</div>
+
+  <script>
+    // ─── Starter Templates ──────────────────────────────────────────
+    const STARTER_FILES = {
+      html: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo List</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="todo-app">
+    <header id="header">
+      <h1>Todo List</h1>
+    </header>
+
+    <div class="todo-input-container">
+      <input type="text" id="todo-input" placeholder="What needs to be done?">
+      <button id="add-btn" type="button">Add Task</button>
+    </div>
+
+    <div class="todo-filters" id="filters">
+      <button id="filter-all" class="filter-btn active" type="button">All</button>
+      <button id="filter-active" class="filter-btn" type="button">Active</button>
+      <button id="filter-completed" class="filter-btn" type="button">Completed</button>
+    </div>
+
+    <ul id="todo-list">
+      <!-- Task items will appear here -->
+    </ul>
+
+    <footer class="todo-footer">
+      <span id="items-left">0 items left</span>
+      <button id="clear-completed" type="button">Clear Completed</button>
+    </footer>
+  </div>
+  <script src="script.js"><\/script>
+</body>
+</html>`,
+
+      css: `* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: #f1f5f9;
+  color: #1e293b;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 16px;
+}
+
+.todo-app {
+  background: #ffffff;
+  width: 100%;
+  max-width: 520px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+  padding: 24px;
+}
+
+#header h1 {
+  font-size: 26px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.todo-input-container {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+#todo-input {
+  flex: 1;
+  padding: 10px 14px;
+  font-size: 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+}
+
+#add-btn {
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  background: #4f46e5;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.todo-filters {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 12px;
+}
+
+.filter-btn {
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.filter-btn.active {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  color: #ffffff;
+}
+
+#todo-list {
+  list-style: none;
+  margin-bottom: 16px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+#todo-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* Note: .completed strikethrough styling is missing! */
+
+.todo-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #64748b;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+#clear-completed {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 12px;
+}`,
+
+      js: `// Starter Code: Incomplete implementation with bugs
+// Fix and complete the missing functionality!
+
+let todos = [];
+
+// Adding a task
+document.getElementById('add-btn').addEventListener('click', function() {
+  const input = document.getElementById('todo-input');
+  const text = input.value;
+  // TODO: Validate text (must not be empty)
+  // TODO: Add to todos list and render
+  // TODO: Clear input field
+  // TODO: Save to localStorage
+  console.log('Add clicked:', text);
+});
+
+// TODO: Listen for 'Enter' key on #todo-input
+// TODO: Handle marking tasks as completed (toggle .completed)
+// TODO: Handle deleting tasks (.delete-btn)
+// TODO: Handle filtering tasks (All, Active, Completed)
+// TODO: Handle #clear-completed button
+// TODO: Load and persist todos to localStorage`,
+
+      readme: `# 📋 Todo List Challenge
+
+Welcome to the **Todo List Challenge**! Your goal is to build a modern, interactive, accessible Todo List web application using vanilla HTML, CSS, and JavaScript.
+
+## 🎯 Objectives & Specifications
+
+### 1. HTML Structure (\`index.html\`)
+- An input with \`id="todo-input"\` and placeholder \`"What needs to be done?"\`.
+- An add button with \`id="add-btn"\` to submit tasks.
+- A list container \`id="todo-list"\` (\`<ul>\` or \`<ol>\`) for rendering task items (\`<li>\`).
+- Three filter buttons inside \`id="filters"\`:
+  - \`id="filter-all"\` with text "All"
+  - \`id="filter-active"\` with text "Active"
+  - \`id="filter-completed"\` with text "Completed"
+- An active tasks counter with \`id="items-left"\`, displaying e.g. "X items left".
+- A clear button with \`id="clear-completed"\` to remove all completed tasks.
+
+### 2. Styling (\`style.css\`)
+- Clean, responsive card layout centered on the screen.
+- Completed tasks (\`.completed\`) must display with a \`text-decoration: line-through\` and/or muted opacity.
+- The currently selected filter button must have the \`.active\` class.
+- Hover and transition states for buttons and list items.
+
+### 3. Interactivity & Logic (\`script.js\`)
+- **Add Task**: Clicking \`#add-btn\` or pressing <kbd>Enter</kbd> in \`#todo-input\` adds a new task.
+- **Input Validation**: Empty or whitespace-only submissions must be ignored. Clear \`#todo-input\` after adding.
+- **Toggle Completion**: Clicking the checkbox inside an item toggles the \`.completed\` class on the \`<li>\`.
+- **Delete Task**: Each task item has a button with class \`.delete-btn\`. Clicking it deletes that specific task.
+- **Filters**: Clicking \`#filter-all\`, \`#filter-active\`, or \`#filter-completed\` updates the visible items and updates the \`.active\` class on the buttons.
+- **Counter**: \`#items-left\` displays the count of uncompleted (active) items.
+- **Clear Completed**: Clicking \`#clear-completed\` removes all finished items.
+- **Persistence**: All tasks must be saved to \`localStorage\` under the key \`'todos'\` so that tasks remain after a page reload.
+
+## ⚡ Automated Tests
+Click **⚡ Test Score** or switch to the **Tests** tab to run the automated test suite at any time!`
+    };
+
+    // ─── Reference Solution ─────────────────────────────────────────
+    const SOLUTION_FILES = {
+      html: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo List</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="todo-app">
+    <header id="header">
+      <h1>Todo List</h1>
+    </header>
+
+    <div class="todo-input-container">
+      <input type="text" id="todo-input" placeholder="What needs to be done?">
+      <button id="add-btn" type="button">Add Task</button>
+    </div>
+
+    <div class="todo-filters" id="filters">
+      <button id="filter-all" class="filter-btn active" type="button">All</button>
+      <button id="filter-active" class="filter-btn" type="button">Active</button>
+      <button id="filter-completed" class="filter-btn" type="button">Completed</button>
+    </div>
+
+    <ul id="todo-list"></ul>
+
+    <footer class="todo-footer">
+      <span id="items-left">0 items left</span>
+      <button id="clear-completed" type="button">Clear Completed</button>
+    </footer>
+  </div>
+  <script src="script.js"><\/script>
+</body>
+</html>`,
+
+      css: `* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: #f8fafc;
+  color: #1e293b;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 48px 16px;
+}
+
+.todo-app {
+  background: #ffffff;
+  width: 100%;
+  max-width: 520px;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.07), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  padding: 28px;
+}
+
+#header h1 {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 22px;
+  text-align: center;
+  letter-spacing: -0.02em;
+}
+
+.todo-input-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+#todo-input {
+  flex: 1;
+  padding: 11px 16px;
+  font-size: 14px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+#todo-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+#add-btn {
+  padding: 11px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  background: #6366f1;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+
+#add-btn:hover {
+  background: #4f46e5;
+}
+
+#add-btn:active {
+  transform: scale(0.98);
+}
+
+.todo-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 14px;
+}
+
+.filter-btn {
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.15s;
+}
+
+.filter-btn:hover {
+  background: #f8fafc;
+  color: #334155;
+}
+
+.filter-btn.active {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #ffffff;
+}
+
+#todo-list {
+  list-style: none;
+  margin-bottom: 18px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+#todo-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.12s;
+}
+
+#todo-list li:hover {
+  background: #f8fafc;
+}
+
+#todo-list li.completed .todo-text {
+  text-decoration: line-through;
+  opacity: 0.55;
+  color: #94a3b8;
+}
+
+.toggle-checkbox {
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+  accent-color: #6366f1;
+}
+
+.todo-text {
+  flex: 1;
+  font-size: 14.5px;
+  color: #1e293b;
+  word-break: break-word;
+}
+
+.delete-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.delete-btn:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+.todo-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #64748b;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
+#clear-completed {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+
+#clear-completed:hover {
+  color: #ef4444;
+}`,
+
+      js: `(function() {
+  let todos = [];
+  try {
+    const saved = localStorage.getItem('todos');
+    if (saved) todos = JSON.parse(saved);
+  } catch(e) {
+    todos = [];
+  }
+
+  let currentFilter = 'all';
+
+  const inputEl = document.getElementById('todo-input');
+  const addBtn = document.getElementById('add-btn');
+  const listEl = document.getElementById('todo-list');
+  const itemsLeftEl = document.getElementById('items-left');
+  const clearBtn = document.getElementById('clear-completed');
+  const filterAllBtn = document.getElementById('filter-all');
+  const filterActiveBtn = document.getElementById('filter-active');
+  const filterCompletedBtn = document.getElementById('filter-completed');
+
+  function saveTodos() {
+    try {
+      localStorage.setItem('todos', JSON.stringify(todos));
+    } catch(e) {}
+  }
+
+  function updateCount() {
+    const activeCount = todos.filter(t => !t.completed).length;
+    itemsLeftEl.textContent = activeCount + ' item' + (activeCount === 1 ? '' : 's') + ' left';
+  }
+
+  function render() {
+    listEl.innerHTML = '';
+
+    const filtered = todos.filter(t => {
+      if (currentFilter === 'active') return !t.completed;
+      if (currentFilter === 'completed') return t.completed;
+      return true;
+    });
+
+    filtered.forEach(todo => {
+      const li = document.createElement('li');
+      li.dataset.id = todo.id;
+      if (todo.completed) {
+        li.classList.add('completed');
+      }
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'toggle-checkbox';
+      checkbox.checked = !!todo.completed;
+      checkbox.addEventListener('change', function() {
+        toggleTodo(todo.id);
+      });
+
+      const span = document.createElement('span');
+      span.className = 'todo-text';
+      span.textContent = todo.text;
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.className = 'delete-btn';
+      deleteBtn.textContent = '×';
+      deleteBtn.setAttribute('aria-label', 'Delete task');
+      deleteBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        deleteTodo(todo.id);
+      });
+
+      li.appendChild(checkbox);
+      li.appendChild(span);
+      li.appendChild(deleteBtn);
+      listEl.appendChild(li);
+    });
+
+    updateCount();
+  }
+
+  function addTodo() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+
+    todos.push({
+      id: Date.now() + Math.random().toString(36).substr(2, 4),
+      text: text,
+      completed: false
+    });
+
+    inputEl.value = '';
+    saveTodos();
+    render();
+  }
+
+  function toggleTodo(id) {
+    const item = todos.find(t => String(t.id) === String(id));
+    if (item) {
+      item.completed = !item.completed;
+      saveTodos();
+      render();
+    }
+  }
+
+  function deleteTodo(id) {
+    todos = todos.filter(t => String(t.id) !== String(id));
+    saveTodos();
+    render();
+  }
+
+  function setFilter(filter) {
+    currentFilter = filter;
+    filterAllBtn.classList.toggle('active', filter === 'all');
+    filterActiveBtn.classList.toggle('active', filter === 'active');
+    filterCompletedBtn.classList.toggle('active', filter === 'completed');
+    render();
+  }
+
+  addBtn.addEventListener('click', addTodo);
+
+  inputEl.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTodo();
+    }
+  });
+
+  filterAllBtn.addEventListener('click', function() { setFilter('all'); });
+  filterActiveBtn.addEventListener('click', function() { setFilter('active'); });
+  filterCompletedBtn.addEventListener('click', function() { setFilter('completed'); });
+
+  clearBtn.addEventListener('click', function() {
+    todos = todos.filter(t => !t.completed);
+    saveTodos();
+    render();
+  });
+
+  render();
+})();`
+    };
+
+    // ─── State Management ──────────────────────────────────────────
+    let files = {
+      html: (localStorage.getItem('td_html') && localStorage.getItem('td_html').trim()) ? localStorage.getItem('td_html') : STARTER_FILES.html,
+      css:  (localStorage.getItem('td_css') && localStorage.getItem('td_css').trim()) ? localStorage.getItem('td_css') : STARTER_FILES.css,
+      js:   (localStorage.getItem('td_js') && localStorage.getItem('td_js').trim()) ? localStorage.getItem('td_js') : STARTER_FILES.js,
+      readme: STARTER_FILES.readme
+    };
+
+    let currentFile = null;
+    const editor = document.getElementById('code-editor');
+    const lineNumbers = document.getElementById('line-numbers');
+
+    function init() {
+      openFile('html');
+      updatePreview(false);
+      setupEditorListeners();
+      setupResizer();
+      setTimeout(runInBrowserTests, 300);
+    }
+
+    function openFile(key) {
+      if (currentFile && currentFile !== key && files[currentFile] !== undefined) {
+        files[currentFile] = editor.value;
+      }
+
+      currentFile = key;
+      editor.value = files[key] || '';
+      editor.readOnly = (key === 'readme');
+
+      ['html', 'css', 'js', 'readme'].forEach(k => {
+        const tab = document.getElementById('tab-' + k);
+        const nav = document.getElementById('nav-' + k);
+        if (tab) tab.classList.toggle('active', k === key);
+        if (nav) nav.classList.toggle('active', k === key);
+      });
+
+      const nameMap = { html: 'index.html', css: 'style.css', js: 'script.js', readme: 'README.md' };
+      const modeMap = { html: 'HTML', css: 'CSS', js: 'JavaScript', readme: 'Markdown' };
+      document.getElementById('current-filename').textContent = nameMap[key];
+      document.getElementById('status-mode').textContent = modeMap[key];
+
+      updateLineNumbers();
+      updateCursorStatus();
+    }
+
+    function updateLineNumbers() {
+      const lines = editor.value.split('\n').length;
+      let nums = [];
+      for (let i = 1; i <= lines; i++) {
+        nums.push(i);
+      }
+      lineNumbers.innerHTML = nums.join('<br>');
+    }
+
+    function updateCursorStatus() {
+      const pos = editor.selectionStart;
+      const val = editor.value.substring(0, pos);
+      const lines = val.split('\n');
+      const line = lines.length;
+      const col = lines[lines.length - 1].length + 1;
+      document.getElementById('status-cursor').textContent = `Ln ${line}, Col ${col}`;
+    }
+
+    let saveTimeout = null;
+    function setupEditorListeners() {
+      editor.addEventListener('input', () => {
+        files[currentFile] = editor.value;
+        if (currentFile !== 'readme') {
+          localStorage.setItem('td_' + currentFile, editor.value);
+        }
+        updateLineNumbers();
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+          updatePreview(false);
+        }, 500);
+      });
+
+      editor.addEventListener('click', updateCursorStatus);
+      editor.addEventListener('keyup', updateCursorStatus);
+
+      editor.addEventListener('scroll', () => {
+        lineNumbers.scrollTop = editor.scrollTop;
+      });
+
+      editor.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          const start = editor.selectionStart;
+          const end = editor.selectionEnd;
+          editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
+          editor.selectionStart = editor.selectionEnd = start + 2;
+          editor.dispatchEvent(new Event('input'));
+        } else if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+          e.preventDefault();
+          updatePreview(true);
+          showToast('Code saved & preview refreshed!');
+        }
+      });
+    }
+
+    function updatePreview(manual) {
+      if (currentFile && currentFile !== 'readme') {
+        files[currentFile] = editor.value;
+      }
+
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(files.html, 'text/html');
+
+      const links = doc.querySelectorAll('link[rel="stylesheet"]');
+      links.forEach(link => {
+        const style = doc.createElement('style');
+        style.textContent = files.css;
+        link.parentNode.replaceChild(style, link);
+      });
+
+      const consoleBridge = `
+<script>
+(function(){
+  var _w=window;
+  ['log','info','warn','error'].forEach(function(m){
+    var orig=_w.console[m].bind(_w.console);
+    _w.console[m]=function(){
+      orig.apply(_w.console,arguments);
+      try{_w.parent.postMessage({__consoleType:m,args:Array.prototype.slice.call(arguments).map(function(a){return typeof a==='object'?JSON.stringify(a):String(a);})},"*");}catch(e){}
+    };
+  });
+  _w.addEventListener('error',function(e){
+    try{_w.parent.postMessage({__consoleType:'error',args:[e.message+' ('+e.filename+':'+e.lineno+')']},'*');}catch(ex){}
+  });
+}());
+<\/script>`;
+
+      const scripts = doc.querySelectorAll('script[src]');
+      scripts.forEach(script => {
+        const s = doc.createElement('script');
+        s.textContent = files.js;
+        script.parentNode.replaceChild(s, script);
+      });
+
+      let fullHtml = '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+      fullHtml = fullHtml.replace('<head>', '<head>' + consoleBridge);
+
+      const iframe = document.getElementById('preview-iframe');
+      iframe.srcdoc = fullHtml;
+
+      if (manual) {
+        showToast('✓ Preview updated!');
+      }
+    }
+
+    // ─── Resizer ────────────────────────────────────────────────────
+    function setupResizer() {
+      const resizer = document.getElementById('resizer');
+      const leftPane = document.getElementById('editor-section');
+      const rightPane = document.getElementById('preview-section');
+      let isDragging = false;
+
+      resizer.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        resizer.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const totalWidth = window.innerWidth - 48 - 200;
+        const leftWidth = e.clientX - 48 - 200;
+        if (leftWidth > 200 && (totalWidth - leftWidth) > 200) {
+          leftPane.style.flex = 'none';
+          leftPane.style.width = leftWidth + 'px';
+          rightPane.style.flex = '1';
+        }
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          resizer.classList.remove('dragging');
+          document.body.style.cursor = '';
+        }
+      });
+    }
+
+    // ─── Presets ───────────────────────────────────────────────────
+    function loadPreset(type) {
+      const source = (type === 'solution') ? SOLUTION_FILES : STARTER_FILES;
+      if (confirm(`Load ${type.toUpperCase()} files? This will replace your current editor content.`)) {
+        files.html   = source.html;
+        files.css    = source.css;
+        files.js     = source.js;
+        files.readme = STARTER_FILES.readme;
+        localStorage.setItem('td_html', files.html);
+        localStorage.setItem('td_css',  files.css);
+        localStorage.setItem('td_js',   files.js);
+
+        const tab = currentFile || 'html';
+        currentFile = null;
+        openFile(tab);
+        updatePreview(false);
+        setTimeout(runInBrowserTests, 500);
+        showToast(`✓ Loaded ${type} code!`);
+      }
+    }
+
+    // ─── Viewport controls ──────────────────────────────────────────
+    function setViewport(w) {
+      const iframe = document.getElementById('preview-iframe');
+      iframe.style.width = w;
+      document.querySelectorAll('.viewport-btn').forEach(btn => btn.classList.remove('active'));
+      if (w === '420px') document.getElementById('vp-mobile').classList.add('active');
+      else document.getElementById('vp-desktop').classList.add('active');
+    }
+
+    function switchRightView(view) {
+      document.getElementById('preview-iframe').style.display    = (view === 'site')    ? 'block' : 'none';
+      document.getElementById('console-panel').classList.toggle('visible',      view === 'console');
+      document.getElementById('test-runner-panel').classList.toggle('visible',  view === 'tests');
+
+      document.getElementById('btn-view-site').classList.toggle('active',    view === 'site');
+      document.getElementById('btn-view-console').classList.toggle('active', view === 'console');
+      document.getElementById('btn-view-tests').classList.toggle('active',   view === 'tests');
+    }
+
+    function openTestTabAndRun() {
+      switchRightView('tests');
+      runInBrowserTests();
+    }
+
+    // ─── Console ──────────────────────────────────────────────────
+    let consoleErrorCount = 0;
+    function clearConsole() {
+      document.getElementById('console-output').innerHTML =
+        '<div class="console-entry info"><span class="console-icon">ℹ</span><span>Console cleared.</span></div>';
+      consoleErrorCount = 0;
+      document.getElementById('console-badge').style.display = 'none';
+    }
+
+    function addConsoleEntry(type, args) {
+      const out = document.getElementById('console-output');
+      const icons = { log: '›', info: 'ℹ', warn: '⚠', error: '✖' };
+      const entry = document.createElement('div');
+      entry.className = 'console-entry ' + type;
+      const text = args.map(a => {
+        if (typeof a === 'object') { try { return JSON.stringify(a, null, 2); } catch(e) { return String(a); } }
+        return String(a);
+      }).join(' ');
+      entry.innerHTML = `<span class="console-icon">${icons[type] || '›'}</span><span>${escapeHtml(text)}</span>`;
+      out.appendChild(entry);
+      out.scrollTop = out.scrollHeight;
+      if (type === 'error' || type === 'warn') {
+        consoleErrorCount++;
+        const badge = document.getElementById('console-badge');
+        badge.textContent = consoleErrorCount > 9 ? '9+' : consoleErrorCount;
+        badge.style.display = 'inline-block';
+      }
+    }
+
+    window.addEventListener('message', function(e) {
+      if (e.data && e.data.__consoleType) {
+        addConsoleEntry(e.data.__consoleType, e.data.args || []);
+      }
+    });
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    // ─── Mini Assertion Helper ──────────────────────────────────────
+    function expect(actual) {
+      return {
+        toBe: function(expected) {
+          if (actual !== expected)
+            throw new Error('Expected ' + JSON.stringify(expected) + ', got ' + JSON.stringify(actual));
+        },
+        toBeTruthy: function() {
+          if (!actual)
+            throw new Error('Expected truthy, got ' + JSON.stringify(actual));
+        },
+        toContain: function(expected) {
+          if (typeof actual !== 'string' || actual.indexOf(expected) === -1)
+            throw new Error('Expected string containing "' + expected + '", got ' + JSON.stringify(actual));
+        }
+      };
+    }
+
+    // ─── Todo Test Definitions (85 visible + 15 hidden = 100 pts) ───
+    const todoVisibleTests = [
+      {
+        id: 'T01',
+        name: '#todo-input and #add-btn exist',
+        category: 'HTML',
+        weight: 5,
+        fn: function(ctx) {
+          const input = ctx.$('#todo-input');
+          const btn = ctx.$('#add-btn');
+          expect(!!input).toBe(true);
+          expect(input.tagName.toLowerCase()).toBe('input');
+          expect(!!btn).toBe(true);
+        }
+      },
+      {
+        id: 'T02',
+        name: '#todo-list exists as <ul> or <ol>',
+        category: 'HTML',
+        weight: 5,
+        fn: function(ctx) {
+          const list = ctx.$('#todo-list');
+          expect(!!list).toBe(true);
+          const tag = list.tagName.toLowerCase();
+          expect(tag === 'ul' || tag === 'ol').toBe(true);
+        }
+      },
+      {
+        id: 'T03',
+        name: 'Filter buttons exist (#filter-all, #filter-active, #filter-completed)',
+        category: 'HTML',
+        weight: 5,
+        fn: function(ctx) {
+          expect(!!ctx.$('#filter-all')).toBe(true);
+          expect(!!ctx.$('#filter-active')).toBe(true);
+          expect(!!ctx.$('#filter-completed')).toBe(true);
+        }
+      },
+      {
+        id: 'T04',
+        name: '#items-left counter and #clear-completed button exist',
+        category: 'HTML',
+        weight: 5,
+        fn: function(ctx) {
+          expect(!!ctx.$('#items-left')).toBe(true);
+          expect(!!ctx.$('#clear-completed')).toBe(true);
+        }
+      },
+      {
+        id: 'T05',
+        name: 'Completed tasks have text-decoration line-through or muted style',
+        category: 'CSS',
+        weight: 5,
+        fn: function(ctx) {
+          ctx.fill('#todo-input', 'Style check item');
+          ctx.click('#add-btn');
+          const item = ctx.$('#todo-list li');
+          expect(!!item).toBe(true);
+          const cb = item.querySelector('input[type="checkbox"]');
+          if (cb) cb.click();
+          else item.click();
+
+          const compItem = ctx.$('#todo-list li.completed') || ctx.$('#todo-list li');
+          const target = compItem.querySelector('.todo-text') || compItem;
+          const s = ctx.css(target);
+          const dec = s.textDecoration || s.textDecorationLine || '';
+          const hasLineThrough = dec.indexOf('line-through') !== -1;
+          const opacity = parseFloat(s.opacity) || 1;
+          expect(hasLineThrough || opacity < 0.8).toBe(true);
+        }
+      },
+      {
+        id: 'T06',
+        name: 'Adding a task via #add-btn appends an <li> to #todo-list',
+        category: 'JavaScript',
+        weight: 7,
+        fn: function(ctx) {
+          ctx.fill('#todo-input', 'Buy groceries');
+          ctx.click('#add-btn');
+          const items = ctx.$$('#todo-list li');
+          expect(items.length >= 1).toBe(true);
+          const match = Array.from(items).some(li => li.textContent.includes('Buy groceries'));
+          expect(match).toBe(true);
+        }
+      },
+      {
+        id: 'T07',
+        name: '#todo-input is cleared after adding a task',
+        category: 'JavaScript',
+        weight: 5,
+        fn: function(ctx) {
+          ctx.fill('#todo-input', 'Clean desk');
+          ctx.click('#add-btn');
+          const val = ctx.$('#todo-input').value;
+          expect(val).toBe('');
+        }
+      },
+      {
+        id: 'T08',
+        name: 'Task can be added by pressing Enter in #todo-input',
+        category: 'JavaScript',
+        weight: 5,
+        fn: function(ctx) {
+          const input = ctx.$('#todo-input');
+          input.value = 'Pay utility bills';
+          input.dispatchEvent(new ctx.w.Event('input', { bubbles: true }));
+          input.dispatchEvent(new ctx.w.KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+          const items = ctx.$$('#todo-list li');
+          const match = Array.from(items).some(li => li.textContent.includes('Pay utility bills'));
+          expect(match).toBe(true);
+        }
+      },
+      {
+        id: 'T09',
+        name: 'Clicking checkbox toggles .completed class on <li>',
+        category: 'JavaScript',
+        weight: 7,
+        fn: function(ctx) {
+          ctx.fill('#todo-input', 'Write tests');
+          ctx.click('#add-btn');
+          const items = ctx.$$('#todo-list li');
+          const target = Array.from(items).find(li => li.textContent.includes('Write tests'));
+          expect(!!target).toBe(true);
+          const cb = target.querySelector('input[type="checkbox"]');
+          if (cb) cb.click();
+          else target.click();
+          expect(target.classList.contains('completed')).toBe(true);
+        }
+      },
+      {
+        id: 'T10',
+        name: 'Clicking .delete-btn removes task item from list',
+        category: 'JavaScript',
+        weight: 7,
+        fn: function(ctx) {
+          ctx.fill('#todo-input', 'Delete me now');
+          ctx.click('#add-btn');
+          let items = ctx.$$('#todo-list li');
+          const target = Array.from(items).find(li => li.textContent.includes('Delete me now'));
+          expect(!!target).toBe(true);
+          const delBtn = target.querySelector('.delete-btn') || target.querySelector('button');
+          expect(!!delBtn).toBe(true);
+          delBtn.click();
+          items = ctx.$$('#todo-list li');
+          const stillThere = Array.from(items).some(li => li.textContent.includes('Delete me now'));
+          expect(stillThere).toBe(false);
+        }
+      },
+      {
+        id: 'T11',
+        name: '#items-left updates accurately when tasks are added and completed',
+        category: 'JavaScript',
+        weight: 5,
+        fn: function(ctx) {
+          ctx.fill('#todo-input', 'Task One');
+          ctx.click('#add-btn');
+          ctx.fill('#todo-input', 'Task Two');
+          ctx.click('#add-btn');
+          let counterText = ctx.textOf('#items-left');
+          expect(counterText.indexOf('2') !== -1).toBe(true);
+
+          const items = ctx.$$('#todo-list li');
+          const t1 = Array.from(items).find(li => li.textContent.includes('Task One'));
+          const cb = t1.querySelector('input[type="checkbox"]');
+          if (cb) cb.click();
+          else t1.click();
+
+          counterText = ctx.textOf('#items-left');
+          expect(counterText.indexOf('1') !== -1).toBe(true);
+        }
+      },
+      {
+        id: 'T12',
+        name: 'Filter "Active" displays only incomplete tasks',
+        category: 'JavaScript',
+        weight: 6,
+        fn: function(ctx) {
+          ctx.fill('#todo-input', 'Active Item');
+          ctx.click('#add-btn');
+          ctx.fill('#todo-input', 'Done Item');
+          ctx.click('#add-btn');
+
+          const items = ctx.$$('#todo-list li');
+          const doneLi = Array.from(items).find(li => li.textContent.includes('Done Item'));
+          const cb = doneLi.querySelector('input[type="checkbox"]');
+          if (cb) cb.click();
+          else doneLi.click();
+
+          ctx.click('#filter-active');
+          const visibleItems = Array.from(ctx.$$('#todo-list li')).filter(li => ctx.css(li).display !== 'none');
+          const hasActive = visibleItems.some(li => li.textContent.includes('Active Item'));
+          const hasDone = visibleItems.some(li => li.textContent.includes('Done Item'));
+          expect(hasActive).toBe(true);
+          expect(hasDone).toBe(false);
+        }
+      },
+      {
+        id: 'T13',
+        name: 'Filter "Completed" displays only finished tasks',
+        category: 'JavaScript',
+        weight: 6,
+        fn: function(ctx) {
+          ctx.fill('#todo-input', 'Incomplete Task');
+          ctx.click('#add-btn');
+          ctx.fill('#todo-input', 'Finished Task');
+          ctx.click('#add-btn');
+
+          const items = ctx.$$('#todo-list li');
+          const doneLi = Array.from(items).find(li => li.textContent.includes('Finished Task'));
+          const cb = doneLi.querySelector('input[type="checkbox"]');
+          if (cb) cb.click();
+          else doneLi.click();
+
+          ctx.click('#filter-completed');
+          const visibleItems = Array.from(ctx.$$('#todo-list li')).filter(li => ctx.css(li).display !== 'none');
+          const hasIncomplete = visibleItems.some(li => li.textContent.includes('Incomplete Task'));
+          const hasFinished = visibleItems.some(li => li.textContent.includes('Finished Task'));
+          expect(hasIncomplete).toBe(false);
+          expect(hasFinished).toBe(true);
+        }
+      },
+      {
+        id: 'T14',
+        name: 'Filter "All" displays all tasks',
+        category: 'JavaScript',
+        weight: 6,
+        fn: function(ctx) {
+          ctx.fill('#todo-input', 'Item A');
+          ctx.click('#add-btn');
+          ctx.fill('#todo-input', 'Item B');
+          ctx.click('#add-btn');
+
+          const items = ctx.$$('#todo-list li');
+          const bLi = Array.from(items).find(li => li.textContent.includes('Item B'));
+          const cb = bLi.querySelector('input[type="checkbox"]');
+          if (cb) cb.click();
+          else bLi.click();
+
+          ctx.click('#filter-completed');
+          ctx.click('#filter-all');
+          const visibleItems = Array.from(ctx.$$('#todo-list li')).filter(li => ctx.css(li).display !== 'none');
+          expect(visibleItems.length >= 2).toBe(true);
+        }
+      },
+      {
+        id: 'T15',
+        name: '#clear-completed button deletes all completed tasks',
+        category: 'JavaScript',
+        weight: 6,
+        fn: function(ctx) {
+          ctx.fill('#todo-input', 'Keep Me');
+          ctx.click('#add-btn');
+          ctx.fill('#todo-input', 'Clear Me');
+          ctx.click('#add-btn');
+
+          const items = ctx.$$('#todo-list li');
+          const clearLi = Array.from(items).find(li => li.textContent.includes('Clear Me'));
+          const cb = clearLi.querySelector('input[type="checkbox"]');
+          if (cb) cb.click();
+          else clearLi.click();
+
+          ctx.click('#clear-completed');
+          const remaining = Array.from(ctx.$$('#todo-list li')).map(li => li.textContent);
+          const hasClear = remaining.some(t => t.includes('Clear Me'));
+          const hasKeep = remaining.some(t => t.includes('Keep Me'));
+          expect(hasClear).toBe(false);
+          expect(hasKeep).toBe(true);
+        }
+      }
+    ];
+
+    const todoHiddenTests = [
+      {
+        id: 'H1',
+        name: 'Empty or whitespace input does not add an item',
+        category: 'Hidden',
+        weight: 3,
+        fn: function(ctx) {
+          const initialCount = ctx.$$('#todo-list li').length;
+          ctx.fill('#todo-input', '   ');
+          ctx.click('#add-btn');
+          const newCount = ctx.$$('#todo-list li').length;
+          expect(newCount).toBe(initialCount);
+        }
+      },
+      {
+        id: 'H2',
+        name: 'Active filter button gets .active class and others do not',
+        category: 'Hidden',
+        weight: 3,
+        fn: function(ctx) {
+          ctx.click('#filter-active');
+          expect(ctx.$('#filter-active').classList.contains('active')).toBe(true);
+          expect(ctx.$('#filter-all').classList.contains('active')).toBe(false);
+          expect(ctx.$('#filter-completed').classList.contains('active')).toBe(false);
+
+          ctx.click('#filter-completed');
+          expect(ctx.$('#filter-completed').classList.contains('active')).toBe(true);
+          expect(ctx.$('#filter-active').classList.contains('active')).toBe(false);
+        }
+      },
+      {
+        id: 'H3',
+        name: 'Tasks are persisted to localStorage under key "todos"',
+        category: 'Hidden',
+        weight: 3,
+        fn: function(ctx) {
+          ctx.fill('#todo-input', 'Storage Check Task');
+          ctx.click('#add-btn');
+          const raw = ctx.w.localStorage.getItem('todos');
+          expect(!!raw).toBe(true);
+          const parsed = JSON.parse(raw);
+          expect(Array.isArray(parsed)).toBe(true);
+          const found = parsed.some(item => (item.text || '').includes('Storage Check Task'));
+          expect(found).toBe(true);
+        }
+      },
+      {
+        id: 'H4',
+        name: 'Task completion status is synced to localStorage',
+        category: 'Hidden',
+        weight: 3,
+        fn: function(ctx) {
+          ctx.fill('#todo-input', 'Sync Done Task');
+          ctx.click('#add-btn');
+          const items = ctx.$$('#todo-list li');
+          const target = Array.from(items).find(li => li.textContent.includes('Sync Done Task'));
+          const cb = target.querySelector('input[type="checkbox"]');
+          if (cb) cb.click();
+          else target.click();
+
+          const raw = ctx.w.localStorage.getItem('todos');
+          const parsed = JSON.parse(raw);
+          const found = parsed.find(item => (item.text || '').includes('Sync Done Task'));
+          expect(!!found).toBe(true);
+          expect(found.completed).toBe(true);
+        }
+      },
+      {
+        id: 'H5',
+        name: '#items-left counter remains accurate after clearing completed tasks',
+        category: 'Hidden',
+        weight: 3,
+        fn: function(ctx) {
+          ctx.fill('#todo-input', 'Task Alpha');
+          ctx.click('#add-btn');
+          ctx.fill('#todo-input', 'Task Beta');
+          ctx.click('#add-btn');
+
+          const items = ctx.$$('#todo-list li');
+          const beta = Array.from(items).find(li => li.textContent.includes('Task Beta'));
+          const cb = beta.querySelector('input[type="checkbox"]');
+          if (cb) cb.click();
+          else beta.click();
+
+          ctx.click('#clear-completed');
+          const counterText = ctx.textOf('#items-left');
+          expect(counterText.indexOf('1') !== -1).toBe(true);
+        }
+      }
+    ];
+
+    // ─── Integrated Test Runner ─────────────────────────────────────
+    async function runInBrowserTests() {
+      const container = document.getElementById('test-results-container');
+      container.innerHTML = '<p style="color:#64748b;">Running tests…</p>';
+
+      const includeHidden = document.getElementById('chk-include-hidden').checked;
+
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(files.html, 'text/html');
+
+      doc.querySelectorAll('link[rel="stylesheet"]').forEach(l => {
+        const s = doc.createElement('style');
+        s.textContent = files.css;
+        l.parentNode.replaceChild(s, l);
+      });
+      doc.querySelectorAll('script[src]').forEach(sc => {
+        const s = doc.createElement('script');
+        s.textContent = files.js;
+        sc.parentNode.replaceChild(s, sc);
+      });
+      const srcdoc = '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+
+      let testSuite = todoVisibleTests.slice();
+      if (includeHidden) {
+        testSuite = testSuite.concat(todoHiddenTests);
+      }
+
+      let testFrame = document.createElement('iframe');
+      testFrame.style.cssText = 'position:absolute;left:-9999px;width:1280px;height:800px;border:none;';
+      document.body.appendChild(testFrame);
+
+      function loadFreshFrame(w) {
+        return new Promise(resolve => {
+          testFrame.style.width = (w || 1280) + 'px';
+          testFrame.onload = () => {
+            try {
+              testFrame.contentWindow.localStorage.removeItem('todos');
+            } catch(e) {}
+            setTimeout(() => resolve(testFrame), 60);
+          };
+          testFrame.srcdoc = srcdoc;
+        });
+      }
+
+      function makeCtx(f) {
+        const w = f.contentWindow;
+        const d = f.contentDocument;
+        return {
+          w, d,
+          $: sel => d.querySelector(sel),
+          $$: sel => d.querySelectorAll(sel),
+          css: el => w.getComputedStyle(el),
+          fill: (sel, val) => {
+            const el = d.querySelector(sel);
+            if (!el) throw new Error('Element not found: ' + sel);
+            el.value = val;
+            el.dispatchEvent(new w.Event('input', { bubbles: true }));
+            el.dispatchEvent(new w.Event('change', { bubbles: true }));
+          },
+          click: sel => {
+            const el = d.querySelector(sel);
+            if (!el) throw new Error('Element not found: ' + sel);
+            el.click();
+          },
+          resize: px => new Promise(res => {
+            testFrame.style.width = px + 'px';
+            setTimeout(res, 120);
+          }),
+          textOf: sel => (d.querySelector(sel) ? d.querySelector(sel).textContent.trim() : '')
+        };
+      }
+
+      const results = [];
+      for (const t of testSuite) {
+        const res = { id: t.id, name: t.name, category: t.category, weight: t.weight, passed: false, message: '' };
+        try {
+          const fr = await loadFreshFrame(1280);
+          const ctx = makeCtx(fr);
+          await Promise.race([
+            Promise.resolve(t.fn(ctx)),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout 3s')), 3000))
+          ]);
+          res.passed = true;
+        } catch (err) {
+          res.message = err.message || String(err);
+        }
+        results.push(res);
+      }
+
+      document.body.removeChild(testFrame);
+
+      let score = 0, total = 0, visScore = 0, visTotal = 0, hidScore = 0, hidTotal = 0;
+      results.forEach(r => {
+        total += r.weight;
+        if (r.passed) score += r.weight;
+        if (r.id.startsWith('H')) {
+          hidTotal += r.weight;
+          if (r.passed) hidScore += r.weight;
+        } else {
+          visTotal += r.weight;
+          if (r.passed) visScore += r.weight;
+        }
+      });
+
+      document.getElementById('score-heading').textContent = `Score: ${score} / ${total}`;
+      document.getElementById('score-indicator').textContent = `${score} / ${total}`;
+      document.getElementById('btn-tests-badge').textContent = `${score} / ${total}`;
+      document.getElementById('score-breakdown').textContent = `Visible: ${visScore}/${visTotal} | Hidden: ${hidScore}/${hidTotal}`;
+
+      let html = '';
+      const categories = {};
+      results.forEach(r => {
+        if (!categories[r.category]) categories[r.category] = [];
+        categories[r.category].push(r);
+      });
+
+      for (const cat in categories) {
+        const list = categories[cat];
+        const catScore = list.filter(x => x.passed).reduce((a, b) => a + b.weight, 0);
+        const catTotal = list.reduce((a, b) => a + b.weight, 0);
+        html += `<div style="font-weight:700; font-size:13px; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 2px solid #cbd5e1; color:#334155;">
+          ${cat} (${catScore} / ${catTotal} pts)
+        </div>`;
+
+        list.forEach(r => {
+          const color = r.passed ? '#16a34a' : '#dc2626';
+          const icon = r.passed ? '✓' : '✗';
+          html += `<div style="display:flex; align-items:baseline; padding:4px 0; font-size:12.5px; border-bottom: 1px solid #f1f5f9;">
+            <span style="color:${color}; font-weight:bold; width:22px; flex-shrink:0;">${icon}</span>
+            <span style="flex:1; color:#1e293b;"><strong>[${r.id}]</strong> ${escapeHtml(r.name)}</span>
+            <span style="color:#64748b; font-size:11px; margin-left:8px;">${r.weight} pts</span>
+          </div>`;
+          if (!r.passed && r.message) {
+            html += `<div style="color:#dc2626; font-size:11.5px; margin: 2px 0 6px 22px;">↳ ${escapeHtml(r.message)}</div>`;
+          }
+        });
+      }
+
+      container.innerHTML = html;
+    }
+
+    function escapeHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>

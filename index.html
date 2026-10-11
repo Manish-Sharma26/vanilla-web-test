@@ -3,1481 +3,323 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Unit Converter – Web IDE & Live Preview</title>
+  <title>Web Assessment Platform – Choose Your Task</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     :root {
-      --bg-dark: #1e1e1e;
-      --bg-editor: #1e1e1e;
-      --bg-sidebar: #252526;
-      --bg-activity: #333333;
-      --bg-tab-bar: #252526;
-      --bg-tab-inactive: #2d2d2d;
-      --bg-tab-active: #1e1e1e;
-      --bg-statusbar: #007acc;
-      --text-main: #cccccc;
-      --text-bright: #ffffff;
-      --text-muted: #858585;
-      --border-color: #3e3e42;
-      --accent: #007acc;
-      --accent-hover: #1f8ad2;
+      --bg: #0a0a0f;
+      --surface: #13131a;
+      --surface2: #1c1c28;
+      --border: rgba(255,255,255,0.08);
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --accent: #6366f1;
+      --accent2: #8b5cf6;
       --green: #22c55e;
-      --red: #ef4444;
-      --yellow: #eab308;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body, html {
-      width: 100%; height: 100%;
-      overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background: var(--bg-dark);
-      color: var(--text-main);
+    html, body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
     }
 
-    #app-container {
-      display: flex;
-      flex-direction: column;
-      width: 100vw;
-      height: 100vh;
-    }
-
-    /* Top Titlebar */
-    .titlebar {
-      height: 35px;
-      background: #181818;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 12px;
-      font-size: 12px;
-      border-bottom: 1px solid var(--border-color);
-      user-select: none;
-    }
-    .titlebar-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .titlebar-brand {
-      font-weight: 600;
-      color: var(--text-bright);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .titlebar-brand svg {
-      width: 16px; height: 16px; fill: #007acc;
-    }
-    .titlebar-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .btn-action {
-      background: #2a2d2e;
-      color: var(--text-bright);
-      border: 1px solid var(--border-color);
-      padding: 4px 10px;
-      border-radius: 3px;
-      cursor: pointer;
-      font-size: 11px;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      transition: background 0.15s;
-    }
-    .btn-action:hover { background: #383b3d; }
-    .btn-action.primary {
-      background: var(--accent);
-      border-color: var(--accent);
-    }
-    .btn-action.primary:hover { background: var(--accent-hover); }
-    .btn-action.success {
-      background: #166534;
-      border-color: #22c55e;
-      color: #86efac;
-    }
-    .btn-action.success:hover { background: #15803d; }
-
-    /* Main Workspace Layout */
-    .main-workspace {
-      flex: 1;
-      display: flex;
-      overflow: hidden;
-      position: relative;
-    }
-
-    /* Activity Bar */
-    .activity-bar {
-      width: 48px;
-      background: var(--bg-activity);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 10px 0;
-      gap: 16px;
-      user-select: none;
-      border-right: 1px solid #2d2d2d;
-    }
-    .activity-icon {
-      width: 36px;
-      height: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-muted);
-      cursor: pointer;
-      border-radius: 4px;
-      position: relative;
-    }
-    .activity-icon:hover { color: var(--text-bright); }
-    .activity-icon.active {
-      color: var(--text-bright);
-    }
-    .activity-icon.active::before {
+    body::before {
       content: '';
-      position: absolute;
-      left: -6px;
-      top: 6px;
-      bottom: 6px;
-      width: 2px;
-      background: var(--text-bright);
-    }
-    .activity-icon svg { width: 20px; height: 20px; fill: currentColor; }
-
-    /* Sidebar (Explorer) */
-    .sidebar {
-      width: 200px;
-      background: var(--bg-sidebar);
-      border-right: 1px solid var(--border-color);
-      display: flex;
-      flex-direction: column;
-      user-select: none;
-      font-size: 13px;
-    }
-    .sidebar-header {
-      padding: 10px 14px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-    .file-tree {
-      flex: 1;
-      overflow-y: auto;
-      padding: 6px 0;
-    }
-    .file-tree-section {
-      padding: 4px 14px;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .file-item {
-      padding: 5px 14px 5px 24px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--text-main);
-      font-size: 13px;
-    }
-    .file-item:hover {
-      background: rgba(255, 255, 255, 0.05);
-    }
-    .file-item.active {
-      background: rgba(255, 255, 255, 0.1);
-      color: var(--text-bright);
-    }
-    .file-badge {
-      font-size: 10px;
-      padding: 1px 4px;
-      border-radius: 3px;
-      margin-left: auto;
-    }
-    .file-badge.html { color: #e34f26; }
-    .file-badge.css { color: #264de4; }
-    .file-badge.js { color: #f7df1e; }
-    .file-badge.md { color: #42b883; }
-
-    /* Left Side: Editor Section */
-    .editor-section {
-      flex: 1;
-      min-width: 250px;
-      display: flex;
-      flex-direction: column;
-      background: var(--bg-editor);
-      overflow: hidden;
-    }
-
-    /* Tab Bar */
-    .tab-bar {
-      height: 35px;
-      background: var(--bg-tab-bar);
-      display: flex;
-      align-items: flex-end;
-      overflow-x: auto;
-      border-bottom: 1px solid var(--border-color);
-      user-select: none;
-    }
-    .tab-item {
-      height: 34px;
-      padding: 0 14px;
-      background: var(--bg-tab-inactive);
-      color: var(--text-muted);
-      border-right: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      font-size: 12px;
-      white-space: nowrap;
-    }
-    .tab-item:hover {
-      background: #323233;
-      color: var(--text-bright);
-    }
-    .tab-item.active {
-      background: var(--bg-tab-active);
-      color: var(--text-bright);
-      border-top: 2px solid var(--accent);
-      border-bottom: none;
-    }
-    .tab-item .dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: #ffffff;
-      opacity: 0;
-    }
-    .tab-item.dirty .dot {
-      opacity: 0.8;
-    }
-
-    /* Breadcrumbs */
-    .breadcrumbs {
-      height: 22px;
-      padding: 0 14px;
-      font-size: 11px;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      background: var(--bg-editor);
-    }
-
-    /* Code Editor Container */
-    .code-editor-wrapper {
-      flex: 1;
-      display: flex;
-      position: relative;
-      overflow: hidden;
-      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
-      font-size: 13.5px;
-      line-height: 1.5;
-    }
-    .line-numbers {
-      width: 48px;
-      padding: 12px 8px 12px 0;
-      text-align: right;
-      color: var(--text-muted);
-      user-select: none;
-      background: var(--bg-editor);
-      border-right: 1px solid rgba(255,255,255,0.05);
-      font-size: 12.5px;
-      line-height: 1.5;
-      overflow: hidden;
-    }
-    .editor-textarea-container {
-      flex: 1;
-      position: relative;
-      height: 100%;
-      overflow: hidden;
-    }
-    .code-textarea {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      padding: 12px 14px;
-      background: transparent;
-      color: #d4d4d4;
-      font-family: inherit;
-      font-size: inherit;
-      line-height: inherit;
-      border: none;
-      outline: none;
-      resize: none;
-      white-space: pre;
-      overflow: auto;
-      tab-size: 2;
-    }
-
-    /* Splitter / Resizer */
-    .resizer {
-      width: 5px;
-      background: #252526;
-      cursor: col-resize;
-      transition: background 0.15s;
-      z-index: 10;
-    }
-    .resizer:hover, .resizer.dragging {
-      background: var(--accent);
-    }
-
-    /* Right Side: Website View */
-    .preview-section {
-      flex: 1;
-      min-width: 250px;
-      display: flex;
-      flex-direction: column;
-      background: #ffffff;
-      overflow: hidden;
-      border-left: 1px solid var(--border-color);
-    }
-
-    /* Browser Header / Navigation */
-    .browser-header {
-      height: 42px;
-      background: #f1f3f5;
-      border-bottom: 1px solid #e2e8f0;
-      display: flex;
-      align-items: center;
-      padding: 0 12px;
-      gap: 10px;
-      color: #334155;
-      user-select: none;
-    }
-    .browser-nav-btn {
-      width: 26px;
-      height: 26px;
-      border-radius: 4px;
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #64748b;
-    }
-    .browser-nav-btn:hover {
-      background: #e2e8f0;
-      color: #0f172a;
-    }
-    .browser-address-bar {
-      flex: 1;
-      height: 28px;
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      padding: 0 10px;
-      font-size: 12px;
-      color: #475569;
-      gap: 6px;
-      overflow: hidden;
-      white-space: nowrap;
-    }
-    .browser-address-bar svg { width: 12px; height: 12px; fill: #16a34a; flex-shrink: 0; }
-    .browser-address-text {
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* View Switcher Tabs */
-    .view-switcher {
-      display: flex;
-      gap: 4px;
-      background: #e2e8f0;
-      padding: 2px;
-      border-radius: 5px;
-    }
-    .view-switcher button {
-      padding: 4px 10px;
-      font-size: 11px;
-      font-weight: 600;
-      border: none;
-      background: transparent;
-      border-radius: 4px;
-      cursor: pointer;
-      color: #475569;
-      transition: all 0.15s;
-    }
-    .view-switcher button.active {
-      background: #ffffff;
-      color: #0f172a;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
-    }
-
-    /* Device sizes */
-    .viewport-controls {
-      display: flex;
-      gap: 4px;
-    }
-    .viewport-btn {
-      background: #e2e8f0;
-      border: none;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      cursor: pointer;
-      color: #475569;
-    }
-    .viewport-btn.active {
-      background: #007acc;
-      color: #ffffff;
-    }
-
-    /* Preview Frame Area */
-    .preview-body {
-      flex: 1;
-      position: relative;
-      background: #f8fafc;
-      overflow: auto;
-      display: flex;
-      justify-content: center;
-      align-items: stretch;
-    }
-    #preview-iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-      background: #ffffff;
-      transition: width 0.2s ease;
-    }
-
-    /* Test Runner Pane on Right */
-    #test-runner-panel {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: #f8fafc;
-      display: none;
-      flex-direction: column;
-      z-index: 20;
-      overflow: hidden;
-    }
-    #test-runner-panel.visible {
-      display: flex;
-    }
-    .test-panel-header {
-      background: #1e293b;
-      color: white;
-      padding: 12px 18px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid #334155;
-    }
-    .test-score-banner {
-      font-size: 18px;
-      font-weight: 700;
-    }
-    .test-panel-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px 20px;
-    }
-
-    /* Checklist Pane */
-    #tasks-panel {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: #ffffff;
-      display: none;
-      flex-direction: column;
-      z-index: 20;
-      overflow-y: auto;
-      padding: 24px;
-      color: #1e293b;
-    }
-    #tasks-panel.visible { display: flex; }
-    #tasks-panel h2 { margin-bottom: 14px; font-size: 1.3rem; }
-    #tasks-panel table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    #tasks-panel th, #tasks-panel td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; font-size: 13px; }
-    #tasks-panel th { background: #f1f5f9; font-weight: 600; }
-
-    /* Bottom Status Bar */
-    .statusbar {
-      height: 24px;
-      background: var(--bg-statusbar);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 10px;
-      font-size: 11px;
-      color: #ffffff;
-      user-select: none;
-    }
-    .statusbar-left, .statusbar-right {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-    .statusbar-item {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      cursor: pointer;
-    }
-    .statusbar-item:hover { opacity: 0.85; }
-
-    /* Toast Notification */
-    #toast {
       position: fixed;
-      bottom: 35px;
-      right: 20px;
-      background: #1e293b;
-      color: #ffffff;
-      padding: 10px 16px;
-      border-radius: 6px;
-      font-size: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-      border-left: 4px solid var(--accent);
-      z-index: 100;
-      opacity: 0;
-      transform: translateY(10px);
-      transition: all 0.2s ease;
+      inset: 0;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 20% -10%, rgba(99,102,241,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 110%, rgba(139,92,246,0.14) 0%, transparent 50%);
       pointer-events: none;
+      z-index: 0;
     }
-    #toast.show {
-      opacity: 1;
-      transform: translateY(0);
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
     }
+
+    .page { position: relative; z-index: 1; }
+
+    /* NAV */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 48px;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,10,15,0.75);
+    }
+    .nav-brand { display: flex; align-items: center; gap: 10px; font-size: 1rem; font-weight: 700; letter-spacing: -0.02em; }
+    .nav-dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: 0 0 10px rgba(99,102,241,0.8);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.35);opacity:0.75} }
+    .nav-badge {
+      background: rgba(99,102,241,0.14); border: 1px solid rgba(99,102,241,0.3);
+      color: #a5b4fc; font-size: 10px; font-weight: 700; padding: 3px 10px;
+      border-radius: 20px; letter-spacing: 0.06em; text-transform: uppercase;
+    }
+
+    /* HERO */
+    .hero { text-align: center; padding: 96px 24px 56px; max-width: 840px; margin: 0 auto; }
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.28);
+      color: #a5b4fc; font-size: 11px; font-weight: 700; padding: 6px 16px;
+      border-radius: 40px; margin-bottom: 32px; letter-spacing: 0.08em; text-transform: uppercase;
+      animation: fadeDown 0.55s ease both;
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 6vw, 4rem); font-weight: 900;
+      line-height: 1.08; letter-spacing: -0.04em; margin-bottom: 20px;
+      animation: fadeDown 0.55s 0.1s ease both;
+    }
+    .grad {
+      background: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #f472b6 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero p {
+      font-size: 1.1rem; color: var(--muted); line-height: 1.7;
+      max-width: 540px; margin: 0 auto 48px;
+      animation: fadeDown 0.55s 0.18s ease both;
+    }
+
+    /* STEPS */
+    .steps {
+      display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;
+      margin-bottom: 72px; animation: fadeDown 0.55s 0.26s ease both;
+    }
+    .step { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.825rem; font-weight: 500; }
+    .step-num {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--surface2); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; color: #a5b4fc;
+    }
+    .step-arrow { color: #2d2d3a; font-size: 14px; }
+
+    /* SECTION HEADING */
+    .section-heading { text-align: center; margin-bottom: 36px; animation: fadeUp 0.6s 0.35s ease both; }
+    .section-heading h2 { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 6px; }
+    .section-heading p { color: var(--muted); font-size: 0.875rem; }
+
+    /* TASK CARDS */
+    .tasks-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px; max-width: 820px; margin: 0 auto 90px; padding: 0 24px;
+      animation: fadeUp 0.65s 0.44s ease both;
+    }
+    .task-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+      padding: 30px; text-decoration: none; color: inherit;
+      display: flex; flex-direction: column; gap: 18px;
+      transition: transform 0.22s cubic-bezier(.34,1.56,.64,1), box-shadow 0.22s ease, border-color 0.2s;
+      position: relative; overflow: hidden;
+    }
+    .task-card::before { content:''; position:absolute; inset:0; opacity:0; transition:opacity 0.25s; border-radius:inherit; }
+    .card-blue::before  { background: radial-gradient(ellipse at top left,  rgba(99,102,241,0.14) 0%, transparent 65%); }
+    .card-green::before { background: radial-gradient(ellipse at top right, rgba(34,197,94,0.13) 0%, transparent 65%); }
+    .task-card:hover { transform: translateY(-6px); border-color: rgba(255,255,255,0.15); }
+    .task-card:hover::before { opacity: 1; }
+    .card-blue:hover  { box-shadow: 0 24px 56px rgba(99,102,241,0.22), 0 0 0 1px rgba(99,102,241,0.22); }
+    .card-green:hover { box-shadow: 0 24px 56px rgba(34,197,94,0.18), 0 0 0 1px rgba(34,197,94,0.2); }
+
+    .card-top { display: flex; align-items: flex-start; justify-content: space-between; }
+    .card-icon {
+      width: 56px; height: 56px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center; font-size: 26px;
+    }
+    .card-blue  .card-icon { background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.28); }
+    .card-green .card-icon { background: rgba(34,197,94,0.12);  border: 1px solid rgba(34,197,94,0.28); }
+
+    .card-badge {
+      font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 20px;
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .card-blue  .card-badge { background: rgba(99,102,241,0.14); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.28); }
+    .card-green .card-badge { background: rgba(34,197,94,0.12);  color: #86efac; border: 1px solid rgba(34,197,94,0.28); }
+
+    .card-title { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; }
+    .card-desc  { color: var(--muted); font-size: 0.85rem; line-height: 1.65; flex: 1; }
+
+    .card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 3px 8px; font-size: 11px; color: var(--muted); font-weight: 500;
+    }
+
+    .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
+    .card-stats { font-size: 11px; color: var(--muted); }
+    .cta-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 0.85rem; font-weight: 700; padding: 9px 18px;
+      border-radius: 10px; border: none; cursor: pointer;
+      transition: all 0.18s; text-decoration: none;
+    }
+    .card-blue  .cta-btn { background: linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; box-shadow: 0 4px 14px rgba(99,102,241,0.4); }
+    .card-green .cta-btn { background: linear-gradient(135deg,#22c55e,#16a34a); color:#fff; box-shadow: 0 4px 14px rgba(34,197,94,0.35); }
+    .card-blue:hover  .cta-btn { box-shadow: 0 6px 22px rgba(99,102,241,0.55); }
+    .card-green:hover .cta-btn { box-shadow: 0 6px 22px rgba(34,197,94,0.5); }
+    .cta-arrow { transition: transform 0.18s; }
+    .task-card:hover .cta-arrow { transform: translateX(3px); }
+
+    /* HOW IT WORKS */
+    .how-section { max-width: 820px; margin: 0 auto 90px; padding: 0 24px; }
+    .how-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 18px; animation: fadeUp 0.65s 0.55s ease both;
+    }
+    .how-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      padding: 22px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .how-icon { font-size: 22px; }
+    .how-card h3 { font-size: 0.875rem; font-weight: 700; }
+    .how-card p  { font-size: 0.78rem; color: var(--muted); line-height: 1.6; }
+    .how-card code { background: var(--surface2); padding: 1px 4px; border-radius: 4px; font-size: 11px; }
+
+    footer {
+      border-top: 1px solid var(--border); padding: 22px 48px;
+      text-align: center; color: var(--muted); font-size: 12px;
+    }
+
+    @keyframes fadeDown { from{opacity:0;transform:translateY(-18px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeUp   { from{opacity:0;transform:translateY(20px)}  to{opacity:1;transform:translateY(0)} }
   </style>
 </head>
 <body>
-  <div id="app-container">
-    <!-- VS Code Top Title Bar -->
-    <div class="titlebar">
-      <div class="titlebar-left">
-        <div class="titlebar-brand">
-          <svg viewBox="0 0 24 24"><path d="M17.5 2.5L23 8v8l-5.5 5.5-7.5-6-4.5 4L1 16.5l3.5-3.5L1 9.5 5.5 6l4.5 4 7.5-6.5z"/></svg>
-          Unit Converter – Web IDE
-        </div>
-        <span style="color: var(--text-muted); font-size: 11px;">student/</span>
-      </div>
-      <div class="titlebar-actions">
-        <button class="btn-action" onclick="loadPreset('starter')">↺ Load Starter</button>
-        <button class="btn-action" onclick="loadPreset('solution')">★ Load Solution</button>
-        <button class="btn-action primary" onclick="updatePreview(true)">▶ Run / Save (Ctrl+S)</button>
-        <button class="btn-action success" onclick="openTestTabAndRun()">⚡ Test Score: <span id="score-indicator">4 / 100</span></button>
-      </div>
+<div class="page">
+
+  <nav>
+    <div class="nav-brand">
+      <div class="nav-dot"></div>
+      WebIDE Assessments
     </div>
+    <span class="nav-badge">v2.0 Beta</span>
+  </nav>
 
-    <!-- Main IDE Workspace -->
-    <div class="main-workspace">
-      <!-- VS Code Activity Bar -->
-      <div class="activity-bar">
-        <div class="activity-icon active" title="Explorer">
-          <svg viewBox="0 0 24 24"><path d="M4 4h7l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>
-        </div>
-        <div class="activity-icon" title="Run Tests" onclick="openTestTabAndRun()">
-          <svg viewBox="0 0 24 24"><path d="M7 2v2h1v5l-4 8v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3l-4-8V4h1V2H7zm3 2h4v5l3.5 7H6.5L10 9V4z"/></svg>
-        </div>
-        <div class="activity-icon" title="Assessment Tasks" onclick="switchRightView('tasks')">
-          <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-9 14l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-        </div>
-      </div>
-
-      <!-- Explorer Sidebar -->
-      <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">Explorer</div>
-        <div class="file-tree">
-          <div class="file-tree-section">▾ STUDENT FILES</div>
-          <div class="file-item active" id="nav-html" onclick="openFile('html')">
-            <span>📄</span>
-            <span>index.html</span>
-            <span class="file-badge html">&lt;/&gt;</span>
-          </div>
-          <div class="file-item" id="nav-css" onclick="openFile('css')">
-            <span>📄</span>
-            <span>style.css</span>
-            <span class="file-badge css">#</span>
-          </div>
-          <div class="file-item" id="nav-js" onclick="openFile('js')">
-            <span>📄</span>
-            <span>script.js</span>
-            <span class="file-badge js">{ }</span>
-          </div>
-
-          <div class="file-tree-section" style="margin-top: 14px;">▾ DOCUMENTATION</div>
-          <div class="file-item" id="nav-readme" onclick="openFile('readme')">
-            <span>📝</span>
-            <span>README.md</span>
-            <span class="file-badge md">MD</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Left: Editor Area -->
-      <div class="editor-section" id="editor-section">
-        <!-- Editor Tabs -->
-        <div class="tab-bar">
-          <div class="tab-item active" id="tab-html" onclick="openFile('html')">
-            <span>index.html</span>
-            <div class="dot"></div>
-          </div>
-          <div class="tab-item" id="tab-css" onclick="openFile('css')">
-            <span>style.css</span>
-            <div class="dot"></div>
-          </div>
-          <div class="tab-item" id="tab-js" onclick="openFile('js')">
-            <span>script.js</span>
-            <div class="dot"></div>
-          </div>
-          <div class="tab-item" id="tab-readme" onclick="openFile('readme')">
-            <span>README.md</span>
-            <div class="dot"></div>
-          </div>
-        </div>
-
-        <!-- Breadcrumbs -->
-        <div class="breadcrumbs" id="breadcrumbs">
-          <span>unit-converter</span> &gt; <span>student</span> &gt; <span id="current-filename">index.html</span>
-        </div>
-
-        <!-- Code Area -->
-        <div class="code-editor-wrapper">
-          <div class="line-numbers" id="line-numbers">1</div>
-          <div class="editor-textarea-container">
-            <textarea
-              class="code-textarea"
-              id="code-editor"
-              spellcheck="false"
-              autocomplete="off"
-              autocorrect="off"
-              autocapitalize="off"
-            ></textarea>
-          </div>
-        </div>
-      </div>
-
-      <!-- Resizer Bar -->
-      <div class="resizer" id="resizer"></div>
-
-      <!-- Right: Website View -->
-      <div class="preview-section" id="preview-section">
-        <!-- Browser Navigation Bar -->
-        <div class="browser-header">
-          <button class="browser-nav-btn" onclick="updatePreview(true)" title="Reload website">↻</button>
-          <div class="browser-address-bar">
-            <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
-            <span class="browser-address-text">http://localhost:8000/student/index.html</span>
-          </div>
-
-          <div class="viewport-controls">
-            <button class="viewport-btn active" id="vp-full" onclick="setViewport('100%')">Fit</button>
-            <button class="viewport-btn" id="vp-desktop" onclick="setViewport('1280px')">1280px</button>
-            <button class="viewport-btn" id="vp-tablet" onclick="setViewport('800px')">800px</button>
-            <button class="viewport-btn" id="vp-mobile" onclick="setViewport('420px')">Mobile</button>
-          </div>
-
-          <div class="view-switcher">
-            <button class="active" id="btn-view-site" onclick="switchRightView('site')">🌐 Website</button>
-            <button id="btn-view-tests" onclick="switchRightView('tests')">🧪 Tests (<span id="btn-tests-badge">4/100</span>)</button>
-            <button id="btn-view-tasks" onclick="switchRightView('tasks')">📋 Tasks</button>
-          </div>
-        </div>
-
-        <!-- Preview Body Container -->
-        <div class="preview-body" id="preview-body">
-          <iframe id="preview-iframe"></iframe>
-
-          <!-- Test Runner Tab -->
-          <div id="test-runner-panel">
-            <div class="test-panel-header">
-              <div>
-                <span class="test-score-banner" id="score-heading">Score: 4 / 100</span>
-                <span style="font-size: 13px; color: #94a3b8; margin-left: 12px;" id="score-breakdown">Visible: 4/85 | Hidden: 0/15</span>
-              </div>
-              <div style="display: flex; gap: 8px;">
-                <label style="font-size: 12px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
-                  <input type="checkbox" id="chk-include-hidden" checked onchange="runInBrowserTests()"> Include Hidden
-                </label>
-                <button class="btn-action primary" onclick="runInBrowserTests()">Run Tests</button>
-              </div>
-            </div>
-            <div class="test-panel-body" id="test-results-container">
-              <p style="color:#64748b;">Click <strong>Run Tests</strong> to evaluate code.</p>
-            </div>
-          </div>
-
-          <!-- Tasks & Requirements Tab -->
-          <div id="tasks-panel">
-            <h2>Assessment Requirements (PRD)</h2>
-            <p style="margin-bottom: 12px; color: #64748b; font-size: 14px;">
-              You have an incomplete <strong>Unit Converter</strong> web page. Edit the files on the left to fix bugs, implement missing functions, and apply the required styles.
-            </p>
-            <table>
-              <thead>
-                <tr>
-                  <th style="width: 40px;">#</th>
-                  <th style="width: 70px;">Area</th>
-                  <th>Task Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td>1</td><td>HTML</td><td>Add <code>&lt;header id="app-header"&gt;</code> as first element in <code>&lt;body&gt;</code> with an <code>&lt;h1&gt;Unit Converter&lt;/h1&gt;</code>.</td></tr>
-                <tr><td>2</td><td>CSS</td><td>Header spans full width, visible background, text horizontally centered.</td></tr>
-                <tr><td>3</td><td>CSS</td><td>Footer background colour must be exactly <code>#1e3a8a</code>.</td></tr>
-                <tr><td>4</td><td>CSS</td><td><code>#converter-card</code> must be horizontally centered on page.</td></tr>
-                <tr><td>5</td><td>CSS</td><td>The input, both selects and Convert button must sit <strong>in one row</strong>.</td></tr>
-                <tr><td>6</td><td>JS</td><td>Implement the 4 stub functions (<code>poundsToKg</code>, <code>fahrenheitToCelsius</code>, <code>metersToFeet</code>, <code>feetToMeters</code>).</td></tr>
-                <tr><td>7</td><td>JS</td><td>Fix <code>milesToKm</code> bug and wrong wiring for <code>lb → kg</code> in <code>convert()</code>.</td></tr>
-                <tr><td>8</td><td>JS</td><td>Wire up Convert button: read inputs, calculate, show <code>10 km = 6.21 mi</code> in <code>#result</code> (max 2 decimals).</td></tr>
-                <tr><td>9</td><td>JS</td><td>Unsupported pairs show <code>Conversion not supported</code> in <code>#error</code> and clear <code>#result</code>.</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+  <section class="hero">
+    <div class="hero-tag">⚡ Mock Interview Platform</div>
+    <h1>Build. Fix. <span class="grad">Ship Code.</span></h1>
+    <p>Practice real frontend interview challenges. Write live HTML, CSS &amp; JS — see instant browser previews, console output, and automated test scores.</p>
+    <div class="steps">
+      <div class="step"><span class="step-num">1</span> Pick a task</div>
+      <div class="step-arrow">→</div>
+      <div class="step"><span class="step-num">2</span> Edit code live</div>
+      <div class="step-arrow">→</div>
+      <div class="step"><span class="step-num">3</span> Preview in browser</div>
+      <div class="step-arrow">→</div>
+      <div class="step"><span class="step-num">4</span> Run tests &amp; score</div>
     </div>
+  </section>
 
-    <!-- Bottom Status Bar -->
-    <div class="statusbar">
-      <div class="statusbar-left">
-        <span class="statusbar-item">🔀 main*</span>
-        <span class="statusbar-item" id="status-cursor">Ln 1, Col 1</span>
-        <span class="statusbar-item" id="status-sync">✓ Auto-sync enabled</span>
+  <div class="section-heading">
+    <h2>Choose a Challenge</h2>
+    <p>Each task ships with broken or incomplete starter code. Fix it, extend it, ship it.</p>
+  </div>
+
+  <div class="tasks-grid">
+
+    <a class="task-card card-blue" href="unit-converter.html" id="card-unit-converter">
+      <div class="card-top">
+        <div class="card-icon">🔄</div>
+        <span class="card-badge">Intermediate · 100 pts</span>
       </div>
-      <div class="statusbar-right">
-        <span class="statusbar-item">Spaces: 2</span>
-        <span class="statusbar-item">UTF-8</span>
-        <span class="statusbar-item" id="status-mode">HTML</span>
-        <span class="statusbar-item" onclick="openTestTabAndRun()" style="font-weight: 600;">⚡ Run Tests</span>
+      <div>
+        <div class="card-title">Unit Converter</div>
+      </div>
+      <p class="card-desc">
+        You get a partly-broken Unit Converter page. Fix JS bugs, implement missing conversion functions, add the page header, style the footer, center the card, and wire up the Convert button — all auto-tested.
+      </p>
+      <div class="card-tags">
+        <span class="tag">HTML</span>
+        <span class="tag">CSS</span>
+        <span class="tag">JavaScript</span>
+        <span class="tag">Debugging</span>
+        <span class="tag">DOM Events</span>
+      </div>
+      <div class="card-footer">
+        <span class="card-stats">⚡ 19 tests · Bugs + missing code</span>
+        <span class="cta-btn">Start <span class="cta-arrow">→</span></span>
+      </div>
+    </a>
+
+    <a class="task-card card-green" href="todo.html" id="card-todo-list">
+      <div class="card-top">
+        <div class="card-icon">✅</div>
+        <span class="card-badge">Beginner · 100 pts</span>
+      </div>
+      <div>
+        <div class="card-title">Todo List</div>
+      </div>
+      <p class="card-desc">
+        Build a fully functional Todo List from a minimal starter. Add tasks, mark them complete, delete items, filter by status, and persist everything to localStorage — tested end-to-end.
+      </p>
+      <div class="card-tags">
+        <span class="tag">HTML</span>
+        <span class="tag">CSS</span>
+        <span class="tag">JavaScript</span>
+        <span class="tag">localStorage</span>
+        <span class="tag">DOM Events</span>
+      </div>
+      <div class="card-footer">
+        <span class="card-stats">⚡ 15 tests · Build from scratch</span>
+        <span class="cta-btn">Start <span class="cta-arrow">→</span></span>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="how-section">
+    <div class="section-heading">
+      <h2>How It Works</h2>
+      <p>Everything runs in your browser — no installs, no sign-up required.</p>
+    </div>
+    <div class="how-grid">
+      <div class="how-card">
+        <div class="how-icon">✏️</div>
+        <h3>VS Code–style Editor</h3>
+        <p>Edit HTML, CSS and JS with line numbers, Tab support, and keyboard shortcuts (Ctrl+S to save).</p>
+      </div>
+      <div class="how-card">
+        <div class="how-icon">🌐</div>
+        <h3>Live Browser Preview</h3>
+        <p>Your code renders instantly in an iframe. Switch between Desktop (1280px) and Mobile (420px) views.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-icon">🖥️</div>
+        <h3>Integrated Console</h3>
+        <p>All <code>console.log</code>, errors and warnings from your code appear in the built-in console panel — no DevTools needed.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-icon">⚡</div>
+        <h3>Auto-graded Tests</h3>
+        <p>Click "Run Tests" for an automated suite that checks HTML, CSS, JS logic, and events — instant score.</p>
       </div>
     </div>
   </div>
 
-  <div id="toast">Code saved & preview updated!</div>
-
-  <!-- Initialize test arrays before scripts -->
-  <script>
-    window.tests = window.tests || [];
-    window.hiddenTests = window.hiddenTests || [];
-  </script>
-  <script src="student/tests.js"></script>
-  <script src="hidden/hidden-tests.js"></script>
-
-  <script>
-    // ─── Starter Templates ──────────────────────────────────────────
-    const STARTER_FILES = {
-      html: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Unit Converter</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <main>
-    <section id="converter-card">
-      <h2>Convert units</h2>
-      <div class="controls">
-        <label for="value-input">Value</label>
-        <input id="value-input" type="text" inputmode="decimal" placeholder="Enter a value">
-        <label for="from-unit">From</label>
-        <select id="from-unit">
-          <option value="km">Kilometers</option>
-          <option value="mi">Miles</option>
-          <option value="m">Meters</option>
-          <option value="ft">Feet</option>
-          <option value="kg">Kilograms</option>
-          <option value="lb">Pounds</option>
-          <option value="C">°C</option>
-          <option value="F">°F</option>
-        </select>
-        <label for="to-unit">To</label>
-        <select id="to-unit">
-          <option value="km">Kilometers</option>
-          <option value="mi" selected>Miles</option>
-          <option value="m">Meters</option>
-          <option value="ft">Feet</option>
-          <option value="kg">Kilograms</option>
-          <option value="lb">Pounds</option>
-          <option value="C">°C</option>
-          <option value="F">°F</option>
-        </select>
-        <button id="convert-btn" type="button">Convert</button>
-      </div>
-      <p id="result" aria-live="polite"></p>
-      <p id="error" role="alert"></p>
-    </section>
-  </main>
   <footer>
-    <p>© Unit Converter Mock</p>
+    © 2026 WebIDE Assessment Platform &nbsp;·&nbsp; All computation runs locally — nothing is sent to a server.
   </footer>
-  <script src="script.js"><\/script>
-</body>
-</html>`,
 
-      css: `body {
-  margin: 0;
-  font-family: sans-serif;
-}
-
-main {
-  padding: 16px;
-}
-
-#converter-card {
-  max-width: 560px;
-  padding: 16px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-}
-
-.controls > * {
-  display: block;
-  margin-bottom: 8px;
-}
-
-footer {
-  background: #cccccc;
-  padding: 12px;
-  text-align: center;
-}`,
-
-      js: `function kmToMiles(km) {
-  // Formula: miles = km × 0.621371
-  return km * 0.621371;
-}
-
-function milesToKm(miles) {
-  // Formula: km = miles × 1.609344
-  return miles * 4;   // BUG: wrong constant
-}
-
-function metersToFeet(m) {
-  // Formula: ft = m × 3.28084
-  // TODO: implement
-}
-
-function feetToMeters(ft) {
-  // Formula: m = ft ÷ 3.28084
-  // TODO: implement
-}
-
-function kgToPounds(kg) {
-  // Formula: lb = kg × 2.20462
-  return kg * 2.20462;
-}
-
-function poundsToKg(lb) {
-  // Formula: kg = lb ÷ 2.20462
-  // TODO: implement
-}
-
-function celsiusToFahrenheit(c) {
-  // Formula: °F = c × 9 ÷ 5 + 32
-  return c * 9 / 5 + 32;
-}
-
-function fahrenheitToCelsius(f) {
-  // Formula: °C = (f − 32) × 5 ÷ 9
-  // TODO: implement
-}
-
-function convert(value, from, to) {
-  switch (\`\${from}-\${to}\`) {
-    case 'km-mi': return kmToMiles(value);
-    case 'mi-km': return milesToKm(value);
-    case 'm-ft':  return metersToFeet(value);
-    case 'ft-m':  return feetToMeters(value);
-    case 'kg-lb': return kgToPounds(value);
-    case 'lb-kg': return kgToPounds(value);  // BUG: should call poundsToKg
-    case 'C-F':   return celsiusToFahrenheit(value);
-    case 'F-C':   return fahrenheitToCelsius(value);
-    default:      return null;
-  }
-}`,
-
-      readme: `# Unit Converter Mock Assessment
-
-Edit index.html, style.css, and script.js on the left.
-Watch the website live update on the right!
-
-Tasks:
-1. Add <header id="app-header"> with <h1>Unit Converter</h1> as first child in <body>.
-2. Center header title, full width, non-transparent background.
-3. Footer background exactly #1e3a8a.
-4. #converter-card horizontally centered.
-5. Controls (.controls) arranged in one row.
-6. Implement 4 stub functions.
-7. Fix milesToKm bug and lb-kg wiring.
-8. Wire #convert-btn click to display "10 km = 6.21 mi" in #result.
-9. Unsupported pairs display "Conversion not supported" in #error.`
-    };
-
-    const SOLUTION_FILES = {
-      html: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Unit Converter</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <header id="app-header">
-    <h1>Unit Converter</h1>
-  </header>
-  <main>
-    <section id="converter-card">
-      <h2>Convert units</h2>
-      <div class="controls">
-        <label for="value-input">Value</label>
-        <input id="value-input" type="text" inputmode="decimal" placeholder="Enter a value">
-        <label for="from-unit">From</label>
-        <select id="from-unit">
-          <option value="km">Kilometers</option>
-          <option value="mi">Miles</option>
-          <option value="m">Meters</option>
-          <option value="ft">Feet</option>
-          <option value="kg">Kilograms</option>
-          <option value="lb">Pounds</option>
-          <option value="C">°C</option>
-          <option value="F">°F</option>
-        </select>
-        <label for="to-unit">To</label>
-        <select id="to-unit">
-          <option value="km">Kilometers</option>
-          <option value="mi" selected>Miles</option>
-          <option value="m">Meters</option>
-          <option value="ft">Feet</option>
-          <option value="kg">Kilograms</option>
-          <option value="lb">Pounds</option>
-          <option value="C">°C</option>
-          <option value="F">°F</option>
-        </select>
-        <button id="convert-btn" type="button">Convert</button>
-      </div>
-      <p id="result" aria-live="polite"></p>
-      <p id="error" role="alert"></p>
-    </section>
-  </main>
-  <footer>
-    <p>© Unit Converter Mock</p>
-  </footer>
-  <script src="script.js"><\/script>
-</body>
-</html>`,
-
-      css: `body {
-  margin: 0;
-  font-family: sans-serif;
-}
-
-#app-header {
-  background: #2563eb;
-  color: white;
-  padding: 16px;
-  text-align: center;
-}
-
-main {
-  padding: 16px;
-}
-
-#converter-card {
-  max-width: 560px;
-  padding: 16px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  margin: 0 auto;
-}
-
-.controls {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.controls > label {
-  display: none;
-}
-
-.controls > * {
-  margin-bottom: 8px;
-}
-
-footer {
-  background: #1e3a8a;
-  color: white;
-  padding: 12px;
-  text-align: center;
-}
-
-#error {
-  color: red;
-}`,
-
-      js: `function kmToMiles(km) {
-  // Formula: miles = km × 0.621371
-  return km * 0.621371;
-}
-
-function milesToKm(miles) {
-  // Formula: km = miles × 1.609344
-  return miles * 1.609344;
-}
-
-function metersToFeet(m) {
-  // Formula: ft = m × 3.28084
-  return m * 3.28084;
-}
-
-function feetToMeters(ft) {
-  // Formula: m = ft ÷ 3.28084
-  return ft / 3.28084;
-}
-
-function kgToPounds(kg) {
-  // Formula: lb = kg × 2.20462
-  return kg * 2.20462;
-}
-
-function poundsToKg(lb) {
-  // Formula: kg = lb ÷ 2.20462
-  return lb / 2.20462;
-}
-
-function celsiusToFahrenheit(c) {
-  // Formula: °F = c × 9 ÷ 5 + 32
-  return c * 9 / 5 + 32;
-}
-
-function fahrenheitToCelsius(f) {
-  // Formula: °C = (f − 32) × 5 ÷ 9
-  return (f - 32) * 5 / 9;
-}
-
-function convert(value, from, to) {
-  if (from === to) return value;
-
-  switch (\`\${from}-\${to}\`) {
-    case 'km-mi': return kmToMiles(value);
-    case 'mi-km': return milesToKm(value);
-    case 'm-ft':  return metersToFeet(value);
-    case 'ft-m':  return feetToMeters(value);
-    case 'kg-lb': return kgToPounds(value);
-    case 'lb-kg': return poundsToKg(value);
-    case 'C-F':   return celsiusToFahrenheit(value);
-    case 'F-C':   return fahrenheitToCelsius(value);
-    default:      return null;
-  }
-}
-
-document.getElementById('convert-btn').addEventListener('click', function() {
-  var input = document.getElementById('value-input').value.trim();
-  var from = document.getElementById('from-unit').value;
-  var to = document.getElementById('to-unit').value;
-  var resultEl = document.getElementById('result');
-  var errorEl = document.getElementById('error');
-
-  // Clear previous
-  resultEl.textContent = '';
-  errorEl.textContent = '';
-
-  // Validate input
-  if (input === '' || !Number.isFinite(parseFloat(input))) {
-    errorEl.textContent = 'Please enter a valid number';
-    return;
-  }
-
-  var value = parseFloat(input);
-  var converted = convert(value, from, to);
-
-  if (converted === null) {
-    errorEl.textContent = 'Conversion not supported';
-    return;
-  }
-
-  resultEl.textContent = Number(value) + ' ' + from + ' = ' + Number(converted.toFixed(2)) + ' ' + to;
-});`
-    };
-
-    // ─── State Management ──────────────────────────────────────────
-    let files = {
-      html: (localStorage.getItem('uc_html') && localStorage.getItem('uc_html').trim()) ? localStorage.getItem('uc_html') : STARTER_FILES.html,
-      css:  (localStorage.getItem('uc_css') && localStorage.getItem('uc_css').trim()) ? localStorage.getItem('uc_css') : STARTER_FILES.css,
-      js:   (localStorage.getItem('uc_js') && localStorage.getItem('uc_js').trim()) ? localStorage.getItem('uc_js') : STARTER_FILES.js,
-      readme: STARTER_FILES.readme
-    };
-
-    let currentFile = null;
-    const editor = document.getElementById('code-editor');
-    const lineNumbers = document.getElementById('line-numbers');
-
-    function init() {
-      openFile('html');
-      updatePreview(false);
-      setupEditorListeners();
-      setupResizer();
-      setTimeout(runInBrowserTests, 300);
-    }
-
-    function openFile(key) {
-      // Save current file text before switching to a different file
-      if (currentFile && currentFile !== key && files[currentFile] !== undefined) {
-        files[currentFile] = editor.value;
-      }
-
-      currentFile = key;
-      editor.value = files[key] || '';
-      editor.readOnly = (key === 'readme');
-
-      // Update UI active states
-      ['html', 'css', 'js', 'readme'].forEach(k => {
-        const tab = document.getElementById('tab-' + k);
-        const nav = document.getElementById('nav-' + k);
-        if (tab) tab.classList.toggle('active', k === key);
-        if (nav) nav.classList.toggle('active', k === key);
-      });
-
-      const nameMap = { html: 'index.html', css: 'style.css', js: 'script.js', readme: 'README.md' };
-      const modeMap = { html: 'HTML', css: 'CSS', js: 'JavaScript', readme: 'Markdown' };
-      document.getElementById('current-filename').textContent = nameMap[key];
-      document.getElementById('status-mode').textContent = modeMap[key];
-
-      updateLineNumbers();
-      updateCursorStatus();
-    }
-
-    function updateLineNumbers() {
-      const lines = editor.value.split('\n').length;
-      let nums = [];
-      for (let i = 1; i <= lines; i++) {
-        nums.push(i);
-      }
-      lineNumbers.innerHTML = nums.join('<br>');
-    }
-
-    function updateCursorStatus() {
-      const pos = editor.selectionStart;
-      const val = editor.value.substring(0, pos);
-      const lines = val.split('\n');
-      const line = lines.length;
-      const col = lines[lines.length - 1].length + 1;
-      document.getElementById('status-cursor').textContent = `Ln ${line}, Col ${col}`;
-    }
-
-    let saveTimeout = null;
-    function setupEditorListeners() {
-      editor.addEventListener('input', () => {
-        files[currentFile] = editor.value;
-        if (currentFile !== 'readme') {
-          localStorage.setItem('uc_' + currentFile, editor.value);
-        }
-        updateLineNumbers();
-        clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(() => {
-          updatePreview(false);
-        }, 500);
-      });
-
-      editor.addEventListener('click', updateCursorStatus);
-      editor.addEventListener('keyup', updateCursorStatus);
-
-      // Scroll line numbers in sync with editor
-      editor.addEventListener('scroll', () => {
-        lineNumbers.scrollTop = editor.scrollTop;
-      });
-
-      // Handle Tab and auto-close
-      editor.addEventListener('keydown', (e) => {
-        if (e.key === 'Tab') {
-          e.preventDefault();
-          const start = editor.selectionStart;
-          const end = editor.selectionEnd;
-          editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
-          editor.selectionStart = editor.selectionEnd = start + 2;
-          editor.dispatchEvent(new Event('input'));
-        } else if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-          e.preventDefault();
-          updatePreview(true);
-          showToast('Code saved & preview refreshed!');
-        }
-      });
-    }
-
-    function updatePreview(manual) {
-      if (currentFile !== 'readme') {
-        files[currentFile] = editor.value;
-      }
-
-      // Build srcdoc by inlining CSS and JS into HTML
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(files.html, 'text/html');
-
-      // Inline style
-      const links = doc.querySelectorAll('link[rel="stylesheet"]');
-      links.forEach(link => {
-        const style = doc.createElement('style');
-        style.textContent = files.css;
-        link.parentNode.replaceChild(style, link);
-      });
-
-      // Inline script
-      const scripts = doc.querySelectorAll('script[src]');
-      scripts.forEach(script => {
-        const s = doc.createElement('script');
-        s.textContent = files.js;
-        script.parentNode.replaceChild(s, script);
-      });
-
-      const fullHtml = '<!DOCTYPE html>' + doc.documentElement.outerHTML;
-      const iframe = document.getElementById('preview-iframe');
-      iframe.srcdoc = fullHtml;
-
-      if (manual) {
-        showToast('Preview updated!');
-      }
-    }
-
-    // ─── Resizer ────────────────────────────────────────────────────
-    function setupResizer() {
-      const resizer = document.getElementById('resizer');
-      const leftPane = document.getElementById('editor-section');
-      const rightPane = document.getElementById('preview-section');
-      let isDragging = false;
-
-      resizer.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        resizer.classList.add('dragging');
-        document.body.style.cursor = 'col-resize';
-      });
-
-      window.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        const totalWidth = window.innerWidth - 48 - 200; // minus activity bar & sidebar
-        const leftWidth = e.clientX - 48 - 200;
-        if (leftWidth > 200 && (totalWidth - leftWidth) > 200) {
-          leftPane.style.flex = 'none';
-          leftPane.style.width = leftWidth + 'px';
-          rightPane.style.flex = '1';
-        }
-      });
-
-      window.addEventListener('mouseup', () => {
-        if (isDragging) {
-          isDragging = false;
-          resizer.classList.remove('dragging');
-          document.body.style.cursor = '';
-        }
-      });
-    }
-
-    // ─── Presets ───────────────────────────────────────────────────
-    function loadPreset(type) {
-      const source = (type === 'solution') ? SOLUTION_FILES : STARTER_FILES;
-      if (confirm(`Load ${type.toUpperCase()} files? This will replace your current editor content.`)) {
-        files.html = source.html;
-        files.css = source.css;
-        files.js = source.js;
-        localStorage.setItem('uc_html', files.html);
-        localStorage.setItem('uc_css', files.css);
-        localStorage.setItem('uc_js', files.js);
-        openFile(currentFile);
-        updatePreview(true);
-        setTimeout(runInBrowserTests, 400);
-        showToast(`Loaded ${type} code!`);
-      }
-    }
-
-    // ─── Viewport controls ──────────────────────────────────────────
-    function setViewport(w) {
-      const iframe = document.getElementById('preview-iframe');
-      iframe.style.width = w;
-      document.querySelectorAll('.viewport-btn').forEach(btn => btn.classList.remove('active'));
-      if (w === '100%') document.getElementById('vp-full').classList.add('active');
-      else if (w === '1280px') document.getElementById('vp-desktop').classList.add('active');
-      else if (w === '800px') document.getElementById('vp-tablet').classList.add('active');
-      else document.getElementById('vp-mobile').classList.add('active');
-    }
-
-    function switchRightView(view) {
-      document.getElementById('preview-iframe').style.display = (view === 'site') ? 'block' : 'none';
-      document.getElementById('test-runner-panel').classList.toggle('visible', view === 'tests');
-      document.getElementById('tasks-panel').classList.toggle('visible', view === 'tasks');
-
-      document.getElementById('btn-view-site').classList.toggle('active', view === 'site');
-      document.getElementById('btn-view-tests').classList.toggle('active', view === 'tests');
-      document.getElementById('btn-view-tasks').classList.toggle('active', view === 'tasks');
-    }
-
-    function openTestTabAndRun() {
-      switchRightView('tests');
-      runInBrowserTests();
-    }
-
-    function showToast(msg) {
-      const toast = document.getElementById('toast');
-      toast.textContent = msg;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 2200);
-    }
-
-    // ─── Integrated Test Runner ─────────────────────────────────────
-    async function runInBrowserTests() {
-      const container = document.getElementById('test-results-container');
-      container.innerHTML = '<p style="color:#64748b;">Running tests…</p>';
-
-      const includeHidden = document.getElementById('chk-include-hidden').checked;
-
-      // Build srcdoc from current editor files
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(files.html, 'text/html');
-
-      doc.querySelectorAll('link[rel="stylesheet"]').forEach(l => {
-        const s = doc.createElement('style');
-        s.textContent = files.css;
-        l.parentNode.replaceChild(s, l);
-      });
-      doc.querySelectorAll('script[src]').forEach(sc => {
-        const s = doc.createElement('script');
-        s.textContent = files.js;
-        sc.parentNode.replaceChild(s, sc);
-      });
-      const srcdoc = '<!DOCTYPE html>' + doc.documentElement.outerHTML;
-
-      // Prepare hidden tests if available
-      let testSuite = (typeof tests !== 'undefined') ? tests.slice() : [];
-      if (includeHidden && typeof hiddenTests !== 'undefined') {
-        testSuite = testSuite.concat(hiddenTests);
-      }
-
-      // Hidden iframe helper
-      let testFrame = document.createElement('iframe');
-      testFrame.style.cssText = 'position:absolute;left:-9999px;width:1280px;height:800px;border:none;';
-      document.body.appendChild(testFrame);
-
-      function loadFreshFrame(w) {
-        return new Promise(resolve => {
-          testFrame.style.width = (w || 1280) + 'px';
-          testFrame.onload = () => setTimeout(() => resolve(testFrame), 60);
-          testFrame.srcdoc = srcdoc;
-        });
-      }
-
-      function makeCtx(f) {
-        const w = f.contentWindow;
-        const d = f.contentDocument;
-        return {
-          w, d,
-          $: sel => d.querySelector(sel),
-          $$: sel => d.querySelectorAll(sel),
-          css: el => w.getComputedStyle(el),
-          fill: (sel, val) => {
-            const el = d.querySelector(sel);
-            if (!el) throw new Error('Element not found: ' + sel);
-            el.value = val;
-            el.dispatchEvent(new w.Event('input', { bubbles: true }));
-            el.dispatchEvent(new w.Event('change', { bubbles: true }));
-          },
-          click: sel => {
-            const el = d.querySelector(sel);
-            if (!el) throw new Error('Element not found: ' + sel);
-            el.click();
-          },
-          resize: px => new Promise(res => {
-            testFrame.style.width = px + 'px';
-            setTimeout(res, 120);
-          }),
-          textOf: sel => (d.querySelector(sel) ? d.querySelector(sel).textContent.trim() : ''),
-          numAfterEquals: numAfterEquals
-        };
-      }
-
-      const results = [];
-      for (const t of testSuite) {
-        const res = { id: t.id, name: t.name, category: t.category, weight: t.weight, passed: false, message: '' };
-        try {
-          const fr = await loadFreshFrame(1280);
-          const ctx = makeCtx(fr);
-          await Promise.race([
-            Promise.resolve(t.fn(ctx)),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout 3s')), 3000))
-          ]);
-          res.passed = true;
-        } catch (err) {
-          res.message = err.message || String(err);
-        }
-        results.push(res);
-      }
-
-      document.body.removeChild(testFrame);
-
-      // Render test results
-      let score = 0, total = 0, visScore = 0, visTotal = 0, hidScore = 0, hidTotal = 0;
-      results.forEach(r => {
-        total += r.weight;
-        if (r.passed) score += r.weight;
-        if (r.id.startsWith('H')) {
-          hidTotal += r.weight;
-          if (r.passed) hidScore += r.weight;
-        } else {
-          visTotal += r.weight;
-          if (r.passed) visScore += r.weight;
-        }
-      });
-
-      document.getElementById('score-heading').textContent = `Score: ${score} / ${total}`;
-      document.getElementById('score-indicator').textContent = `${score} / ${total}`;
-      document.getElementById('btn-tests-badge').textContent = `${score} / ${total}`;
-      document.getElementById('score-breakdown').textContent = `Visible: ${visScore}/${visTotal} | Hidden: ${hidScore}/${hidTotal}`;
-
-      let html = '';
-      const categories = {};
-      results.forEach(r => {
-        if (!categories[r.category]) categories[r.category] = [];
-        categories[r.category].push(r);
-      });
-
-      for (const cat in categories) {
-        const list = categories[cat];
-        const catScore = list.filter(x => x.passed).reduce((a, b) => a + b.weight, 0);
-        const catTotal = list.reduce((a, b) => a + b.weight, 0);
-        html += `<div style="font-weight:700; font-size:13px; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 2px solid #cbd5e1; color:#334155;">
-          ${cat} (${catScore} / ${catTotal} pts)
-        </div>`;
-
-        list.forEach(r => {
-          const color = r.passed ? '#16a34a' : '#dc2626';
-          const icon = r.passed ? '✓' : '✗';
-          html += `<div style="display:flex; align-items:baseline; padding:4px 0; font-size:12.5px; border-bottom: 1px solid #f1f5f9;">
-            <span style="color:${color}; font-weight:bold; width:22px; flex-shrink:0;">${icon}</span>
-            <span style="flex:1; color:#1e293b;"><strong>[${r.id}]</strong> ${escapeHtml(r.name)}</span>
-            <span style="color:#64748b; font-size:11px; margin-left:8px;">${r.weight} pts</span>
-          </div>`;
-          if (!r.passed && r.message) {
-            html += `<div style="color:#dc2626; font-size:11.5px; margin: 2px 0 6px 22px;">↳ ${escapeHtml(r.message)}</div>`;
-          }
-        });
-      }
-
-      container.innerHTML = html;
-    }
-
-    function escapeHtml(str) {
-      const d = document.createElement('div');
-      d.textContent = str;
-      return d.innerHTML;
-    }
-
-    if (document.readyState === 'loading') {
-      window.addEventListener('DOMContentLoaded', init);
-    } else {
-      init();
-    }
-  </script>
+</div>
 </body>
 </html>
-
